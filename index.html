@@ -39,26 +39,42 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     if (!file) return;
 
     Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
+        header: false,
+        //skipEmptyLines: true,
+      let preValue = rows[0][2]; // Column C (0-based index: A=0, B=1, C=2)
+      let postValue = rows[1][2];
+      let followValue = rows[2][2];
+
         complete: function(results) {
             const data = results.data;
 
             // Define grouped metrics
             const groups = [
-                { label: "25 ft Walk", rowspan: 2, metrics: ["Avg. Time (s)", "Avg. Speed (ft/s)"] },
-                { label: "6 min Walk", rowspan: 1, metrics: ["Distance Traveled (m)"] },
+                { label: "25 ft Walk", rowspan: 2, metrics: [
+                  { name: "Average Time (s)", col: 3 },  // Column C
+                  { name: "Average Speed (ft/s)", col: 4 } // Column D
+                ]},
+                { label: "6 min Walk", rowspan: 1, metrics: [{ name: "Distance Traveled (m)", col: 6 } // Column F
+                ]},
                 { label: "GaitRite Normal", rowspan: 3, metrics: [
-                    "Avg. Stride Length Left (cm)",
-                    "Avg. Stride Length Right (cm)",
-                    "Avg. Velocity (cm/sec)"
+                  { name: "Avg. Stride Left (cm)", col: 8 }, //Column H-J
+                  { name: "Avg. Stride Right (cm)", col: 9 },
+                  { name: "Avg. Velocity (cm/sec)", col: 10 }
                 ]},
                 { label: "GaitRite Fast", rowspan: 3, metrics: [
-                    "Avg. Stride Length Left Fast (cm)",
-                    "Avg. Stride Length Right Fast (cm)",
-                    "Avg. Velocity Fast (cm/sec)"
+                  { name: "Avg. Stride Left Fast", col: 11}, //Column K-M
+                  { name: "Avg. Stride Right Fast", col: 12 },
+                  { name: "Avg. Velocity Fast", col: 13 }
                 ]},
-                { label: "", rowspan: 1, metrics: ["12 Item MS Walk Scale (%)"] }
+                { label: "Plantarflexion", rowspan: 2, metrics: [
+                  { name: "EMG:", col: 14}, //column N & O
+                  { name: "Force:", col: 15};
+                ]},
+                 { label: "Dorsiflexion", rowspan: 2, metrics: [
+                  { name: "EMG:", col: 16}, //column P & Q
+                  { name: "Force:", col: 17};
+                ]},
+                { label: "", rowspan: 1, metrics: ["12 Item MS Walk Scale (%)"] } //Column R
             ];
 
             let week1 = data.slice(0,3); // Pre, Post, Follow-up
@@ -128,7 +144,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 });
 
 function createTable(groups, rows) {
-    let html = "<table><tr><th>Category</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th><th>% Change (Pre→Follow-up)</th></tr>";
+    let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th><th>";
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
             html += "<tr>";
