@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pre-Post-Follow-up Comparison</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  body { font-family: Arial; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background: #f4f4f4; }
+</style>
+</head>
+<body>
+
+<h2>Upload CSV to Compare Pre, Post, Follow-up</h2>
+<input type="file" id="csvFile" accept=".csv" />
+
+<div id="output"></div>
+
+<script>
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            const data = results.data;
+
+            // Identify metrics (columns excluding date/adaptive)
+            const metrics = [
+                "Average Time",
+                "Average Speed",
+                "Distance Traveled in 6 Minutes  [Report in Meters]",
+                "Average Stride Length Left (cm)",
+                "Average Stride Length Right (cm)",
+                "Average Velocity (cm/sec)"
+            ];
+
+            // Assume first 3 rows = Week 1 (Pre, Post, Follow-up)
+            // and next 3 rows = Week 2 (Pre, Post, Follow-up)
+            let week1 = data.slice(0,3);
+            let week2 = data.slice(3,6);
+
+            let html = "<h3>Week 1 Comparison</h3>";
+            html += createTable(metrics, week1);
+
+            html += "<h3>Week 2 Comparison</h3>";
+            html += createTable(metrics, week2);
+
+            document.getElementById('output').innerHTML = html;
+        }
+    });
+});
+
+function createTable(metrics, rows) {
+    let html = "<table><tr><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th></tr>";
+    metrics.forEach(metric => {
+        html += `<tr><td>${metric}</td>`;
+        rows.forEach(r => {
+            let val = parseFloat(r[metric]);
+            html += `<td>${isNaN(val) ? '-' : val.toFixed(2)}</td>`;
+        });
+        html += "</tr>";
+    });
+    html += "</table>";
+    return html;
+}
+</script>
+
+</body>
+</html>
