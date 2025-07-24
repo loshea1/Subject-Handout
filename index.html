@@ -44,14 +44,11 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
         complete: function(results) {
             const data = results.data;
 
-            // Grouped metrics with column indexes
             const groups = [
-                { label: "", rowspan: 1, metrics: [
-                  { name: "Date of Assessment", col: 0}
-                  ]},
-                { label: "", rowspan: 1, metrics: [
-                  { name: "Assistive Device/s", col: 1}
-                  ]},                    
+                { label: "General Info", rowspan: 2, metrics: [
+                    { name: "Date of Assessment", col: 0, isText: true },
+                    { name: "Assistive Device/s", col: 1, isText: true }
+                ]},                    
                 { label: "25 ft Walk", rowspan: 2, metrics: [
                     { name: "Average Time (s)", col: 2 },
                     { name: "Average Speed (ft/s)", col: 3 }
@@ -86,12 +83,8 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             let week2 = data.slice(3, 6);
 
             let html = "";
-
-            html += "<h3>Week 1</h3>";
-            html += createTable(groups, week1);
-
-            html += "<h3>Week 2</h3>";
-            html += createTable(groups, week2);
+            html += "<h3>Week 1</h3>" + createTable(groups, week1);
+            html += "<h3>Week 2</h3>" + createTable(groups, week2);
 
             document.getElementById('output').innerHTML = html;
 
@@ -99,17 +92,19 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             let summaries = [];
             groups.forEach(g => {
                 g.metrics.forEach(metric => {
-                    const w1avg = avg(week1.map(r => parseFloat(r[metric.col]) || NaN));
-                    const w2avg = avg(week2.map(r => parseFloat(r[metric.col]) || NaN));
-                    if (!isNaN(w1avg) && !isNaN(w2avg)) {
-                        let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
-                        let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
-                        if (w1avg > w2avg) {
-                            summaries.push(`${metric.name}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}) ${diffText}.`);
-                        } else if (w2avg > w1avg) {
-                            summaries.push(`${metric.name}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}) ${diffText}.`);
-                        } else {
-                            summaries.push(`${metric.name}: Both equal (${w1avg.toFixed(2)}).`);
+                    if (!metric.isText) { // Only calculate numeric metrics
+                        const w1avg = avg(week1.map(r => parseFloat(r[metric.col]) || NaN));
+                        const w2avg = avg(week2.map(r => parseFloat(r[metric.col]) || NaN));
+                        if (!isNaN(w1avg) && !isNaN(w2avg)) {
+                            let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
+                            let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
+                            if (w1avg > w2avg) {
+                                summaries.push(`${metric.name}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}) ${diffText}.`);
+                            } else if (w2avg > w1avg) {
+                                summaries.push(`${metric.name}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}) ${diffText}.`);
+                            } else {
+                                summaries.push(`${metric.name}: Both equal (${w1avg.toFixed(2)}).`);
+                            }
                         }
                     }
                 });
@@ -141,31 +136,32 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 });
 
 function createTable(groups, rows) {
-    // Dates from column 0 (A)
-    let dates = rows.map(r => r[0] || "-");
-
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
-    //html += `<tr><td colspan='1'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
-
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
             html += "<tr>";
-            if (i === 0) {
-                html += `<td rowspan="${group.rowspan}">${group.label}</td>`;
-            }
+            if (i === 0) html += `<td rowspan="${group.rowspan}">${group.label}</td>`;
             html += `<td>${metric.name}</td>`;
 
-            let pre = parseFloat(rows[0][metric.col]);
-            let post = parseFloat(rows[1][metric.col]);
-            let follow = parseFloat(rows[2][metric.col]);
+            let preVal = rows[0][metric.col] || "-";
+            let postVal = rows[1][metric.col] || "-";
+            let followVal = rows[2][metric.col] || "-";
 
-            html += `<td>${isNaN(pre) ? '-' : pre.toFixed(2)}</td>`;
-            html += `<td>${isNaN(post) ? '-' : post.toFixed(2)}</td>`;
-            html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
+            if (metric.isText) {
+                html += `<td>${preVal}</td><td>${postVal}</td><td>${followVal}</td><td>-</td>`;
+            } else {
+                let pre = parseFloat(preVal);
+                let post = parseFloat(postVal);
+                let follow = parseFloat(followVal);
 
-            let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
-            let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
-            html += `<td ${postClass}>${postChange}</td>`;
+                html += `<td>${isNaN(pre) ? '-' : pre.toFixed(2)}</td>`;
+                html += `<td>${isNaN(post) ? '-' : post.toFixed(2)}</td>`;
+                html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
+
+                let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
+                let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
+                html += `<td ${postClass}>${postChange}</td>`;
+            }
 
             html += "</tr>";
         });
