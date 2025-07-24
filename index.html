@@ -46,6 +46,12 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 
             // Grouped metrics with column indexes
             const groups = [
+                { label: "", rowspan: 1, metrics: [
+                  { name: "Date of Assessment", col: 0}
+                  ]},
+                { label: "", rowspan: 1, metrics: [
+                  { name: "Assistive Device/s", col: 1}
+                  ]},                    
                 { label: "25 ft Walk", rowspan: 2, metrics: [
                     { name: "Average Time (s)", col: 2 },
                     { name: "Average Speed (ft/s)", col: 3 }
@@ -139,7 +145,7 @@ function createTable(groups, rows) {
     let dates = rows.map(r => r[0] || "-");
 
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
-    html += `<tr><td colspan='1'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
+    //html += `<tr><td colspan='1'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
 
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
