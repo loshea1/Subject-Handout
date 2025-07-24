@@ -32,13 +32,21 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
         complete: function(results) {
             const data = results.data;
 
-            const metrics = [
-                "Average Time",
-                "Average Speed",
-                "Distance Traveled in 6 Minutes  [Report in Meters]",
-                "Average Stride Length Left (cm)",
-                "Average Stride Length Right (cm)",
-                "Average Velocity (cm/sec)"
+            // Define grouped metrics
+            const groups = [
+                { label: "25 ft Walk", rowspan: 2, metrics: ["Avg. Time (s)", "Avg. Speed (ft/s)"] },
+                { label: "6 min Walk", rowspan: 1, metrics: ["Distance Traveled (m)"] },
+                { label: "GaitRite Normal", rowspan: 3, metrics: [
+                    "Avg. Stride Length Left (cm)",
+                    "Avg. Stride Length Right (cm)",
+                    "Avg. Velocity (cm/sec)"
+                ]},
+                { label: "GaitRite Fast", rowspan: 3, metrics: [
+                    "Avg. Stride Length Left Fast (cm)",
+                    "Avg. Stride Length Right Fast (cm)",
+                    "Avg. Velocity Fast (cm/sec)"
+                ]},
+                { label: "", rowspan: 1, metrics: ["12 Item MS Walk Scale (%)"] }
             ];
 
             let week1 = data.slice(0,3); // Pre, Post, Follow-up
@@ -48,28 +56,30 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 
             // Week 1 Table
             html += "<h3>Week 1</h3>";
-            html += createTable(metrics, week1);
+            html += createTable(groups, week1);
 
             // Week 2 Table
             html += "<h3>Week 2</h3>";
-            html += createTable(metrics, week2);
+            html += createTable(groups, week2);
 
             document.getElementById('output').innerHTML = html;
 
-            // Generate summary
+            // Summary (average comparisons)
             let summaries = [];
-            metrics.forEach(metric => {
-                const w1avg = avg(week1.map(r => parseFloat(r[metric]) || NaN));
-                const w2avg = avg(week2.map(r => parseFloat(r[metric]) || NaN));
-                if (!isNaN(w1avg) && !isNaN(w2avg)) {
-                    if (w1avg > w2avg) {
-                        summaries.push(`${metric}: Week 1 was higher on average (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}).`);
-                    } else if (w2avg > w1avg) {
-                        summaries.push(`${metric}: Week 2 was higher on average (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}).`);
-                    } else {
-                        summaries.push(`${metric}: Both weeks were about the same (${w1avg.toFixed(2)}).`);
+            groups.forEach(g => {
+                g.metrics.forEach(metric => {
+                    const w1avg = avg(week1.map(r => parseFloat(r[metric]) || NaN));
+                    const w2avg = avg(week2.map(r => parseFloat(r[metric]) || NaN));
+                    if (!isNaN(w1avg) && !isNaN(w2avg)) {
+                        if (w1avg > w2avg) {
+                            summaries.push(`${metric}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}).`);
+                        } else if (w2avg > w1avg) {
+                            summaries.push(`${metric}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}).`);
+                        } else {
+                            summaries.push(`${metric}: Both equal (${w1avg.toFixed(2)}).`);
+                        }
                     }
-                }
+                });
             });
 
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
@@ -77,15 +87,23 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     });
 });
 
-function createTable(metrics, rows) {
-    let html = "<table><tr><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th></tr>";
-    metrics.forEach(metric => {
-        html += `<tr><td>${metric}</td>`;
-        rows.forEach(r => {
-            let val = parseFloat(r[metric]);
-            html += `<td>${isNaN(val) ? '-' : val.toFixed(2)}</td>`;
+function createTable(groups, rows) {
+    let html = "<table><tr><th>Category</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th></tr>";
+    groups.forEach(group => {
+        group.metrics.forEach((metric, i) => {
+            html += "<tr>";
+            if (i === 0 && group.label) {
+                html += `<td rowspan="${group.rowspan}">${group.label}</td>`;
+            } else if (i === 0 && !group.label) {
+                html += `<td rowspan="${group.rowspan}"></td>`;
+            }
+            html += `<td>${metric}</td>`;
+            rows.forEach(r => {
+                let val = parseFloat(r[metric]);
+                html += `<td>${isNaN(val) ? '-' : val.toFixed(2)}</td>`;
+            });
+            html += "</tr>";
         });
-        html += "</tr>";
     });
     html += "</table>";
     return html;
