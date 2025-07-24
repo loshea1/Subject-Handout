@@ -9,18 +9,20 @@
   body { font-family: Arial; margin: 20px; }
   h2, h3 { margin-top: 20px; }
   table {
-  border-collapse: collapse;
-  margin: 15px 0;
-  width: auto; /* Auto width instead of full screen */
+    border-collapse: collapse;
+    margin: 15px 0;
+    width: auto;
   }
   th, td {
     border: 1px solid #ccc;
     padding: 8px;
     text-align: center;
-    white-space: nowrap; /* Prevent breaking */
+    white-space: nowrap;
   }
   th { background: #f4f4f4; }
   .summary { margin-top: 20px; background: #eef; padding: 10px; border-radius: 5px; }
+  .green { background: #d4edda; }
+  .red { background: #f8d7da; }
 </style>
 </head>
 <body>
@@ -28,7 +30,6 @@
 <h2>Upload CSV to Compare Weeks</h2>
 <input type="file" id="csvFile" accept=".csv" />
 
-  
 <div id="output"></div>
 <div id="summary" class="summary"></div>
 <button id="saveBtn" style="margin-top:20px; padding:10px 15px;">Save as PDF</button>
@@ -40,119 +41,114 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 
     Papa.parse(file, {
         header: false,
-        //skipEmptyLines: true,
-
         complete: function(results) {
             const data = results.data;
 
-            // Define grouped metrics
+            // Grouped metrics with column indexes
             const groups = [
                 { label: "25 ft Walk", rowspan: 2, metrics: [
-                  { name: "Average Time (s)", col: 2},  // Column C
-                  { name: "Average Speed (ft/s)", col: 3 } // Column D
+                    { name: "Average Time (s)", col: 2 },
+                    { name: "Average Speed (ft/s)", col: 3 }
                 ]},
-                { label: "6 min Walk", rowspan: 1, metrics: [{ name: "Distance Traveled (m)", col: 5} // Column F
+                { label: "6 min Walk", rowspan: 1, metrics: [
+                    { name: "Distance Traveled (m)", col: 5 }
                 ]},
                 { label: "GaitRite Normal", rowspan: 3, metrics: [
-                  { name: "Avg. Stride Left (cm)", col: 7 }, //Column H-J
-                  { name: "Avg. Stride Right (cm)", col: 8 },
-                  { name: "Avg. Velocity (cm/sec)", col: 9 }
+                    { name: "Avg. Stride Left (cm)", col: 7 },
+                    { name: "Avg. Stride Right (cm)", col: 8 },
+                    { name: "Avg. Velocity (cm/sec)", col: 9 }
                 ]},
                 { label: "GaitRite Fast", rowspan: 3, metrics: [
-                  { name: "Avg. Stride Left Fast", col: 10}, //Column K-M
-                  { name: "Avg. Stride Right Fast", col: 11 },
-                  { name: "Avg. Velocity Fast", col: 12}
+                    { name: "Avg. Stride Left Fast", col: 10 },
+                    { name: "Avg. Stride Right Fast", col: 11 },
+                    { name: "Avg. Velocity Fast", col: 12 }
                 ]},
                 { label: "Plantarflexion", rowspan: 2, metrics: [
-                  { name: "EMG:", col: 13}, //column N & O
-                  { name: "Force:", col: 14}
+                    { name: "EMG", col: 13 },
+                    { name: "Force", col: 14 }
                 ]},
-                 { label: "Dorsiflexion", rowspan: 2, metrics: [
-                  { name: "EMG:", col: 15}, //column P & Q
-                  { name: "Force:", col: 16}
+                { label: "Dorsiflexion", rowspan: 2, metrics: [
+                    { name: "EMG", col: 15 },
+                    { name: "Force", col: 16 }
                 ]},
                 { label: "", rowspan: 1, metrics: [
-                  {name: "12 Item MS Walk Scale (%)", col: 17}  //Column R
-                ] }
+                    { name: "12 Item MS Walk Scale (%)", col: 17 }
+                ]}
             ];
 
-            let week1 = data.slice(0,3); // Pre, Post, Follow-up
-            let week2 = data.slice(3,6);
+            let week1 = data.slice(0, 3); // Pre, Post, Follow-up
+            let week2 = data.slice(3, 6);
 
             let html = "";
 
-            // Week 1 Table
             html += "<h3>Week 1</h3>";
             html += createTable(groups, week1);
 
-            // Week 2 Table
             html += "<h3>Week 2</h3>";
             html += createTable(groups, week2);
 
             document.getElementById('output').innerHTML = html;
 
-            // Summary (average comparisons)
+            // Summary
             let summaries = [];
             groups.forEach(g => {
                 g.metrics.forEach(metric => {
                     const w1avg = avg(week1.map(r => parseFloat(r[metric.col]) || NaN));
                     const w2avg = avg(week2.map(r => parseFloat(r[metric.col]) || NaN));
                     if (!isNaN(w1avg) && !isNaN(w2avg)) {
-
-                      let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
-                      let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
-                      
-                      if (w1avg > w2avg) {
-                        summaries.push(`${metric}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}) ${diffText}.`);
-                      } else if (w2avg > w1avg) {
-                        summaries.push(`${metric}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}) ${diffText}.`);
-                      } else {
-                        summaries.push(`${metric}: Both equal (${w1avg.toFixed(2)}).`);
-                      }
-
+                        let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
+                        let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
+                        if (w1avg > w2avg) {
+                            summaries.push(`${metric.name}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}) ${diffText}.`);
+                        } else if (w2avg > w1avg) {
+                            summaries.push(`${metric.name}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}) ${diffText}.`);
+                        } else {
+                            summaries.push(`${metric.name}: Both equal (${w1avg.toFixed(2)}).`);
+                        }
                     }
                 });
             });
 
-
-
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
 
-          document.getElementById('saveBtn').addEventListener('click', function () {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'pt', 'a4');
-
-    doc.html(document.getElementById('output'), {
-        callback: function (doc) {
-            doc.addPage();
-            doc.html(document.getElementById('summary'), {
-                callback: function (doc) {
-                    doc.save('comparison_report.pdf');
-                },
-                x: 20,
-                y: 20
+            // Save as PDF
+            document.getElementById('saveBtn').addEventListener('click', function () {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                doc.html(document.getElementById('output'), {
+                    callback: function (doc) {
+                        doc.addPage();
+                        doc.html(document.getElementById('summary'), {
+                            callback: function (doc) {
+                                doc.save('comparison_report.pdf');
+                            },
+                            x: 20,
+                            y: 20
+                        });
+                    },
+                    x: 20,
+                    y: 20
+                });
             });
-        },
-        x: 20,
-        y: 20
-    });
-});
-
         }
     });
 });
 
 function createTable(groups, rows) {
-    let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)<th>";
+    // Dates from column 0 (A)
+    let dates = rows.map(r => r[0] || "-");
+
+    let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
+    html += `<tr><td colspan='2'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
+
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
             html += "<tr>";
             if (i === 0) {
                 html += `<td rowspan="${group.rowspan}">${group.label}</td>`;
             }
-            html += `<td>${metric}</td>`;
+            html += `<td>${metric.name}</td>`;
 
-            // Extract Pre, Post, Follow-up
             let pre = parseFloat(rows[0][metric.col]);
             let post = parseFloat(rows[1][metric.col]);
             let follow = parseFloat(rows[2][metric.col]);
@@ -161,15 +157,9 @@ function createTable(groups, rows) {
             html += `<td>${isNaN(post) ? '-' : post.toFixed(2)}</td>`;
             html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
 
-            // Percentage changes
             let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
-            let followChange = (!isNaN(pre) && !isNaN(follow) && pre !== 0) ? ((follow - pre) / pre * 100).toFixed(2) + "%" : "-";
-
-            let postStyle = parseFloat(postChange) > 0 ? 'style="background:#d4edda;"' : (parseFloat(postChange) < 0 ? 'style="background:#f8d7da;"' : '');
-            let followStyle = parseFloat(followChange) > 0 ? 'style="background:#d4edda;"' : (parseFloat(followChange) < 0 ? 'style="background:#f8d7da;"' : '');
-          
-            html += `<td ${postStyle}>${postChange}</td>`;
-            html += `<td ${followStyle}>${followChange}</td>`;
+            let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
+            html += `<td ${postClass}>${postChange}</td>`;
 
             html += "</tr>";
         });
@@ -177,7 +167,6 @@ function createTable(groups, rows) {
     html += "</table>";
     return html;
 }
-
 
 function avg(arr) {
     const valid = arr.filter(x => !isNaN(x));
