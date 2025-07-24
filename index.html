@@ -12,16 +12,13 @@
   border-collapse: collapse;
   margin: 15px 0;
   width: auto; /* Auto width instead of full screen */
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
-  white-space: nowrap; /* Prevent breaking */
-}
-
-
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+    white-space: nowrap; /* Prevent breaking */
+  }
   th { background: #f4f4f4; }
   .summary { margin-top: 20px; background: #eef; padding: 10px; border-radius: 5px; }
 </style>
@@ -31,9 +28,10 @@ th, td {
 <h2>Upload CSV to Compare Weeks</h2>
 <input type="file" id="csvFile" accept=".csv" />
 
-  <button id="saveBtn" style="margin-top:20px; padding:10px 15px;">Save as PDF</button>
+  
 <div id="output"></div>
 <div id="summary" class="summary"></div>
+<button id="saveBtn" style="margin-top:20px; padding:10px 15px;">Save as PDF</button>
 
 <script>
 document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -89,13 +87,14 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                       let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
                       let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
                       
-                        if (w1avg > w2avg) {
-                            summaries.push(`${metric}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}).`);
-                        } else if (w2avg > w1avg) {
-                            summaries.push(`${metric}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}).`);
-                        } else {
-                            summaries.push(`${metric}: Both equal (${w1avg.toFixed(2)}).`);
-                        }
+                      if (w1avg > w2avg) {
+                        summaries.push(`${metric}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}) ${diffText}.`);
+                      } else if (w2avg > w1avg) {
+                        summaries.push(`${metric}: Week 2 higher (${w2avg.toFixed(2)} vs ${w1avg.toFixed(2)}) ${diffText}.`);
+                      } else {
+                        summaries.push(`${metric}: Both equal (${w1avg.toFixed(2)}).`);
+                      }
+
                     }
                 });
             });
