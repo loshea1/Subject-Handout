@@ -4,10 +4,23 @@
 <meta charset="UTF-8">
 <title>Week 1 and Week 2 Comparison</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
   h2, h3 { margin-top: 20px; }
-  table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+  table {
+  border-collapse: collapse;
+  margin: 15px 0;
+  width: auto; /* Auto width instead of full screen */
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap; /* Prevent breaking */
+}
+
+
   th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
   th { background: #f4f4f4; }
   .summary { margin-top: 20px; background: #eef; padding: 10px; border-radius: 5px; }
@@ -18,6 +31,7 @@
 <h2>Upload CSV to Compare Weeks</h2>
 <input type="file" id="csvFile" accept=".csv" />
 
+  <button id="saveBtn" style="margin-top:20px; padding:10px 15px;">Save as PDF</button>
 <div id="output"></div>
 <div id="summary" class="summary"></div>
 
@@ -71,6 +85,10 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                     const w1avg = avg(week1.map(r => parseFloat(r[metric]) || NaN));
                     const w2avg = avg(week2.map(r => parseFloat(r[metric]) || NaN));
                     if (!isNaN(w1avg) && !isNaN(w2avg)) {
+
+                      let diffPercent = ((w2avg - w1avg) / w1avg * 100).toFixed(2);
+                      let diffText = diffPercent > 0 ? `(+${diffPercent}%)` : `(${diffPercent}%)`;
+                      
                         if (w1avg > w2avg) {
                             summaries.push(`${metric}: Week 1 higher (${w1avg.toFixed(2)} vs ${w2avg.toFixed(2)}).`);
                         } else if (w2avg > w1avg) {
@@ -82,32 +100,70 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                 });
             });
 
+
+
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
+
+          document.getElementById('saveBtn').addEventListener('click', function () {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    doc.html(document.getElementById('output'), {
+        callback: function (doc) {
+            doc.addPage();
+            doc.html(document.getElementById('summary'), {
+                callback: function (doc) {
+                    doc.save('comparison_report.pdf');
+                },
+                x: 20,
+                y: 20
+            });
+        },
+        x: 20,
+        y: 20
+    });
+});
+
         }
     });
 });
 
 function createTable(groups, rows) {
-    let html = "<table><tr><th>Category</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th></tr>";
+    let html = "<table><tr><th>Category</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th><th>% Change (Pre→Follow-up)</th></tr>";
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
             html += "<tr>";
-            if (i === 0 && group.label) {
+            if (i === 0) {
                 html += `<td rowspan="${group.rowspan}">${group.label}</td>`;
-            } else if (i === 0 && !group.label) {
-                html += `<td rowspan="${group.rowspan}"></td>`;
             }
             html += `<td>${metric}</td>`;
-            rows.forEach(r => {
-                let val = parseFloat(r[metric]);
-                html += `<td>${isNaN(val) ? '-' : val.toFixed(2)}</td>`;
-            });
+
+            // Extract Pre, Post, Follow-up
+            let pre = parseFloat(rows[0][metric]);
+            let post = parseFloat(rows[1][metric]);
+            let follow = parseFloat(rows[2][metric]);
+
+            html += `<td>${isNaN(pre) ? '-' : pre.toFixed(2)}</td>`;
+            html += `<td>${isNaN(post) ? '-' : post.toFixed(2)}</td>`;
+            html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
+
+            // Percentage changes
+            let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
+            let followChange = (!isNaN(pre) && !isNaN(follow) && pre !== 0) ? ((follow - pre) / pre * 100).toFixed(2) + "%" : "-";
+
+            let postStyle = parseFloat(postChange) > 0 ? 'style="background:#d4edda;"' : (parseFloat(postChange) < 0 ? 'style="background:#f8d7da;"' : '');
+            let followStyle = parseFloat(followChange) > 0 ? 'style="background:#d4edda;"' : (parseFloat(followChange) < 0 ? 'style="background:#f8d7da;"' : '');
+          
+            html += `<td ${postStyle}>${postChange}</td>`;
+            html += `<td ${followStyle}>${followChange}</td>`;
+
             html += "</tr>";
         });
     });
     html += "</table>";
     return html;
 }
+
 
 function avg(arr) {
     const valid = arr.filter(x => !isNaN(x));
