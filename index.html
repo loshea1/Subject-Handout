@@ -139,7 +139,7 @@ function createTable(groups, rows) {
     let dates = rows.map(r => r[0] || "-");
 
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
-    html += `<tr><td colspan='2'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
+    html += `<tr><td colspan='1'>Date</td><td>${dates[0]}</td><td>${dates[1]}</td><td>${dates[2]}</td><td>-</td></tr>`;
 
     groups.forEach(group => {
         group.metrics.forEach((metric, i) => {
