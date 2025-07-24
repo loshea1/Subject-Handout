@@ -42,7 +42,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     Papa.parse(file, {
         header: false,
         complete: function(results) {
-            const data = results.data;
+            const data = results.data.slice(1);
 
             const groups = [
                 { label: "General Info", rowspan: 2, metrics: [
