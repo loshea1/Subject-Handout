@@ -4,17 +4,20 @@
 <meta charset="UTF-8">
 <title>Week 1 and Week 2 Comparison</title>
 
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Styles -->
 <style>
   body { font-family: Arial; margin: 20px; }
   h2, h3 { margin-top: 20px; }
   table {
     border-collapse: collapse;
     margin: 15px 0;
-    width: 100%; /* Responsive width */
+    width: 100%;
     max-width: 100%;
   }
   th, td {
@@ -28,14 +31,13 @@
   .green { background: #d4edda; }
   .red { background: #f8d7da; }
 
-  /* Flex for large screens, stack on smaller */
   .tables-container {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
   }
   .table-section {
-    flex: 1 1 500px; /* Grow but min width 500px */
+    flex: 1 1 500px;
     box-sizing: border-box;
   }
 
@@ -44,14 +46,13 @@
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
     margin-top: 30px;
-}
-#chartsContainer canvas {
+  }
+  #chartsContainer canvas {
     background: #fff;
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
+  }
 </style>
 </head>
 <body>
@@ -114,6 +115,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             let week1 = data.slice(0, 3); // Pre, Post, Follow-up
             let week2 = data.slice(3, 6);
 
+            // Tables
             let html = `
             <div id="tablesContainer" class="tables-container">
              <div class="table-section">
@@ -126,7 +128,6 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             </div>
           </div>
         `;
-
             document.getElementById('output').innerHTML = html;
 
             // Summary
@@ -153,70 +154,60 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
 
-          // Create charts for each assessment
-document.getElementById('chartsContainer')?.remove(); // Remove old charts if any
-let chartsHTML = '<div id="chartsContainer"><h3>Visual Comparison</h3></div>';
-document.body.insertAdjacentHTML('beforeend', chartsHTML);
-const chartsContainer = document.getElementById('chartsContainer');
+            // Charts
+            document.getElementById('chartsContainer')?.remove(); // Remove old charts if any
+            let chartsHTML = '<div id="chartsContainer"><h3>Visual Comparison</h3></div>';
+            document.body.insertAdjacentHTML('beforeend', chartsHTML);
+            const chartsContainer = document.getElementById('chartsContainer');
 
-groups.forEach((g, index) => {
-    // Only numeric metrics
-    const numericMetrics = g.metrics.filter(m => !m.isText);
-    if (numericMetrics.length === 0) return;
+            groups.forEach((g, index) => {
+                const numericMetrics = g.metrics.filter(m => !m.isText);
+                if (numericMetrics.length === 0) return;
 
- // Extract Pre and Post values for each metric
-    const week1Pre = numericMetrics.map(m => parseFloat(week1[0][m.col]) || NaN);
-    const week1Post = numericMetrics.map(m => parseFloat(week1[1][m.col]) || NaN);
-    const week2Pre = numericMetrics.map(m => parseFloat(week2[0][m.col]) || NaN);
-    const week2Post = numericMetrics.map(m => parseFloat(week2[1][m.col]) || NaN);
+                const week1Pre = numericMetrics.map(m => parseFloat(week1[0][m.col]) || NaN);
+                const week1Post = numericMetrics.map(m => parseFloat(week1[1][m.col]) || NaN);
+                const week2Pre = numericMetrics.map(m => parseFloat(week2[0][m.col]) || NaN);
+                const week2Post = numericMetrics.map(m => parseFloat(week2[1][m.col]) || NaN);
 
-    // Create canvas
-    const canvasId = `chart_${index}`;
-    const canvas = document.createElement('canvas');
-    canvas.id = canvasId;
-    canvas.style.maxWidth = "700px";
-    canvas.style.margin = "20px auto";
-    chartsContainer.appendChild(canvas);
+                const canvas = document.createElement('canvas');
+                canvas.id = `chart_${index}`;
+                canvas.style.maxWidth = "700px";
+                canvas.style.margin = "20px auto";
+                chartsContainer.appendChild(canvas);
 
-// Define labels for this group
-const labels = numericMetrics.map(m => m.name);
+                const labels = numericMetrics.map(m => m.name);
 
-// Render chart
-new Chart(canvas, {
-    type: 'bar',
-    data: {
-        labels: labels,
-        datasets: [
-            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
-            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
-            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)' }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            title: { display: true, text: g.label || "Assessment" },
-            legend: { position: 'bottom' }
-        },
-        scales: {
-            y: { beginAtZero: true }
+                new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+                            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
+                            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)' }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: { display: true, text: g.label || "Assessment" },
+                            legend: { position: 'bottom' }
+                        },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            });
         }
-    }
+    });
 });
 
-});
-
-
-
-
+// Save as PDF
 document.getElementById('saveBtn').addEventListener('click', async function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape', 'pt', 'a4');
-
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // 1. Tables
     const tablesElement = document.getElementById('tablesContainer');
     const tablesCanvas = await html2canvas(tablesElement, { scale: 2 });
     const imgDataTables = tablesCanvas.toDataURL('image/png');
@@ -224,7 +215,6 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
     const imgHeightTables = (tablesCanvas.height * imgWidthTables) / tablesCanvas.width;
     doc.addImage(imgDataTables, 'PNG', 20, 20, imgWidthTables, imgHeightTables);
 
-    // 2. Summary
     doc.addPage('a4', 'portrait');
     const summaryElement = document.getElementById('summary');
     const summaryCanvas = await html2canvas(summaryElement, { scale: 2 });
@@ -233,7 +223,6 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
     const imgHeightSummary = (summaryCanvas.height * imgWidthSummary) / summaryCanvas.width;
     doc.addImage(imgDataSummary, 'PNG', 20, 20, imgWidthSummary, imgHeightSummary);
 
-    // 3. Charts (new page)
     doc.addPage('a4', 'landscape');
     const chartsElement = document.getElementById('chartsContainer');
     const chartsCanvas = await html2canvas(chartsElement, { scale: 2 });
@@ -245,7 +234,6 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
     doc.save('comparison_report.pdf');
     document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
 });
-
 
 function createTable(groups, rows) {
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
@@ -271,10 +259,9 @@ function createTable(groups, rows) {
                 html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
 
                 let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
-                let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
+                let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '';
                 html += `<td ${postClass}>${postChange}</td>`;
             }
-
             html += "</tr>";
         });
     });
