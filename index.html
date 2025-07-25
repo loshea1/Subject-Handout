@@ -4,13 +4,10 @@
 <meta charset="UTF-8">
 <title>Week 1 and Week 2 Comparison</title>
 
-<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Styles -->
 <style>
   body { font-family: Arial; margin: 20px; }
   h2, h3 { margin-top: 20px; }
@@ -41,9 +38,10 @@
     box-sizing: border-box;
   }
 
+  /* Charts grid: 2 columns */
   #chartsContainer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     margin-top: 30px;
   }
@@ -52,6 +50,16 @@
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    width: 100%;
+    height: 300px; /* Smaller charts */
+  }
+
+  /* Save button at bottom */
+  #saveSection {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
   }
 </style>
 </head>
@@ -62,9 +70,13 @@
 
 <div id="output"></div>
 <div id="summary" class="summary"></div>
-<div style="display: flex; align-items: center; gap: 15px; margin-top: 20px;">
-    <button id="saveBtn" style="padding:10px 15px;">Save as PDF</button>
-    <p id="saveMsg" style="color: green; font-weight: bold; margin: 0;"></p>
+
+<div id="chartsContainer"></div>
+
+<!-- Save button moved to bottom -->
+<div id="saveSection">
+  <button id="saveBtn" style="padding:10px 15px;">Save as PDF</button>
+  <p id="saveMsg" style="color: green; font-weight: bold; margin: 0;"></p>
 </div>
 
 <script>
@@ -75,13 +87,13 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     Papa.parse(file, {
         header: false,
         complete: function(results) {
-            const data = results.data.slice(1); // Skip header row
+            const data = results.data.slice(1);
 
             const groups = [
                 { label: "General Info", rowspan: 2, metrics: [
                     { name: "Date of Assessment", col: 0, isText: true },
                     { name: "Assistive Device/s", col: 1, isText: true }
-                ]},                    
+                ]},
                 { label: "25 ft Walk", rowspan: 2, metrics: [
                     { name: "Average Time (s)", col: 2 },
                     { name: "Average Speed (ft/s)", col: 3 }
@@ -112,10 +124,9 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                 ]}
             ];
 
-            let week1 = data.slice(0, 3); // Pre, Post, Follow-up
+            let week1 = data.slice(0, 3);
             let week2 = data.slice(3, 6);
 
-            // Tables
             let html = `
             <div id="tablesContainer" class="tables-container">
              <div class="table-section">
@@ -126,8 +137,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
               <h3>Week 2</h3>
               ${createTable(groups, week2)}
             </div>
-          </div>
-        `;
+          </div>`;
             document.getElementById('output').innerHTML = html;
 
             // Summary
@@ -155,11 +165,8 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
 
             // Charts
-            document.getElementById('chartsContainer')?.remove(); // Remove old charts if any
-            let chartsHTML = '<div id="chartsContainer"><h3>Visual Comparison</h3></div>';
-            document.body.insertAdjacentHTML('beforeend', chartsHTML);
             const chartsContainer = document.getElementById('chartsContainer');
-
+            chartsContainer.innerHTML = "";
             groups.forEach((g, index) => {
                 const numericMetrics = g.metrics.filter(m => !m.isText);
                 if (numericMetrics.length === 0) return;
@@ -170,22 +177,18 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                 const week2Post = numericMetrics.map(m => parseFloat(week2[1][m.col]) || NaN);
 
                 const canvas = document.createElement('canvas');
-                canvas.id = `chart_${index}`;
-                canvas.style.maxWidth = "700px";
-                canvas.style.margin = "20px auto";
                 chartsContainer.appendChild(canvas);
 
                 const labels = numericMetrics.map(m => m.name);
-
                 new Chart(canvas, {
                     type: 'bar',
                     data: {
                         labels: labels,
                         datasets: [
-                            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
-                            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
-                            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)' }
+                            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 }
                         ]
                     },
                     options: {
@@ -194,7 +197,9 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                             title: { display: true, text: g.label || "Assessment" },
                             legend: { position: 'bottom' }
                         },
-                        scales: { y: { beginAtZero: true } }
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
                     }
                 });
             });
@@ -202,7 +207,6 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     });
 });
 
-// Save as PDF
 document.getElementById('saveBtn').addEventListener('click', async function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape', 'pt', 'a4');
@@ -262,6 +266,7 @@ function createTable(groups, rows) {
                 let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
                 html += `<td ${postClass}>${postChange}</td>`;
             }
+
             html += "</tr>";
         });
     });
