@@ -42,8 +42,11 @@
 
 <div id="output"></div>
 <div id="summary" class="summary"></div>
-<button id="saveBtn" style="margin-top:20px; padding:10px 15px;">Save as PDF</button>
-<p id="saveMsg" style="color: green; font-weight: bold;"></p>
+<div style="display: flex; align-items: center; gap: 15px; margin-top: 20px;">
+    <button id="saveBtn" style="padding:10px 15px;">Save as PDF</button>
+    <p id="saveMsg" style="color: green; font-weight: bold; margin: 0;"></p>
+</div>
+
 
 <script>
 document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -148,7 +151,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                         doc.html(week2Table, {
                             x: 420,
                             y: 20,
-                            width: 380,
+                            width: 100,
                             callback: function () {
                                 doc.addPage('a4', 'portrait');
                                 doc.html(document.getElementById('summary'), {
