@@ -98,17 +98,17 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             let week2 = data.slice(3, 6);
 
             let html = `
-<div class="tables-container">
-  <div class="table-section">
-    <h3>Week 1</h3>
-    ${createTable(groups, week1)}
-  </div>
-  <div class="table-section">
-    <h3>Week 2</h3>
-    ${createTable(groups, week2)}
-  </div>
-</div>
-`;
+            <div id="tablesContainer" class="tables-container">
+             <div class="table-section">
+              <h3>Week 1</h3>
+              ${createTable(groups, week1)}
+             </div>
+             <div class="table-section">
+              <h3>Week 2</h3>
+              ${createTable(groups, week2)}
+            </div>
+          </div>
+        `;
 
             document.getElementById('output').innerHTML = html;
 
