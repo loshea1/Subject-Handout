@@ -5,7 +5,7 @@
 <title>Week 1 and Week 2 Comparison</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
   h2, h3 { margin-top: 20px; }
@@ -134,41 +134,40 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             });
 
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
-
-            // Save as PDF
-            document.getElementById('saveBtn').addEventListener('click', function () {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('landscape', 'pt', 'a4');
-
-                const week1Table = document.querySelector('.table-section:nth-child(1)');
-                const week2Table = document.querySelector('.table-section:nth-child(2)');
-
-                doc.html(week1Table, {
-                    x: 20,
-                    y: 20,
-                    width: 380,
-                    callback: function () {
-                        doc.html(week2Table, {
-                            x: 420,
-                            y: 20,
-                            width: 100,
-                            callback: function () {
-                                doc.addPage('a4', 'portrait');
-                                doc.html(document.getElementById('summary'), {
-                                    x: 20,
-                                    y: 20,
-                                    callback: function () {
-                                        doc.save('comparison_report.pdf');
-                                        document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            });
         }
     });
+});
+
+document.getElementById('saveBtn').addEventListener('click', async function () {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape', 'pt', 'a4');
+
+    // Capture tables container
+    const tablesElement = document.getElementById('tablesContainer');
+    const tablesCanvas = await html2canvas(tablesElement, { scale: 0.9 });
+    const imgDataTables = tablesCanvas.toDataURL('image/png');
+
+    // Fit tables into landscape A4
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const imgWidth = pageWidth - 40;
+    const imgHeight = (tablesCanvas.height * imgWidth) / tablesCanvas.width;
+
+    doc.addImage(imgDataTables, 'PNG', 20, 20, imgWidth, imgHeight);
+
+    // Add summary on new page
+    doc.addPage('a4', 'portrait');
+    const summaryElement = document.getElementById('summary');
+    const summaryCanvas = await html2canvas(summaryElement, { scale: 1 });
+    const imgDataSummary = summaryCanvas.toDataURL('image/png');
+
+    const sumImgWidth = pageWidth - 40;
+    const sumImgHeight = (summaryCanvas.height * sumImgWidth) / summaryCanvas.width;
+    doc.addImage(imgDataSummary, 'PNG', 20, 20, sumImgWidth, sumImgHeight);
+
+    // Save PDF
+    doc.save('comparison_report.pdf');
+    document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
 });
 
 function createTable(groups, rows) {
