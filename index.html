@@ -82,9 +82,22 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             let week1 = data.slice(0, 3); // Pre, Post, Follow-up
             let week2 = data.slice(3, 6);
 
-            let html = "";
-            html += "<h3>Week 1</h3>" + createTable(groups, week1);
-            html += "<h3>Week 2</h3>" + createTable(groups, week2);
+            //let html = "";
+            //html += "<h3>Week 1</h3>" + createTable(groups, week1);
+            //html += "<h3>Week 2</h3>" + createTable(groups, week2);
+
+          let html = `
+<div class="tables-container">
+  <div class="table-section">
+    <h3>Week 1</h3>
+    ${createTable(groups, week1)}
+  </div>
+  <div class="table-section">
+    <h3>Week 2</h3>
+    ${createTable(groups, week2)}
+  </div>
+</div>
+`;
 
             document.getElementById('output').innerHTML = html;
 
@@ -111,6 +124,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
             });
 
             document.getElementById('summary').innerHTML = "<h3>Summary</h3><ul><li>" + summaries.join("</li><li>") + "</li></ul>";
+            document.getElementById('output').innerHTML = html;
 
             // Save as PDF
             document.getElementById('saveBtn').addEventListener('click', function () {
@@ -122,6 +136,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                         doc.html(document.getElementById('summary'), {
                             callback: function (doc) {
                                 doc.save('comparison_report.pdf');
+                                document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
                             },
                             x: 20,
                             y: 20
