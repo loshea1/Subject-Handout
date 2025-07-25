@@ -181,31 +181,35 @@ groups.forEach((g, index) => {
     // Render chart
     new Chart(canvas, {
         type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Week 1 - Pre', data: week1Values, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
-                { label: 'Week 1 - Post', data: week1Values, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
-                { label: 'Week 2 - Pre', data: week2Values, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                { label: 'Week 2 - Post', data: week1Values, backgroundColor: 'rgba(54, 119, 235, 0.7)' },
-            ]
+        // Define labels from numeric metrics
+const labels = numericMetrics.map(m => m.name);
+
+new Chart(canvas, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [
+            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
+            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)' }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: { display: true, text: g.label || "Assessment" },
+            legend: { position: 'bottom' }
         },
-        options: {
-            responsive: true,
-            plugins: { 
-                title: { display: true, text: g.label || "Assessment" },
-                legend: { position: 'bottom' }
-            },
-            scales: {
-                y: { beginAtZero: true }
-            }
+        scales: {
+            y: { beginAtZero: true }
         }
-    });
+    }
+});
+}
+
 });
 
-        }
-    });
-});
 
 document.getElementById('saveBtn').addEventListener('click', async function () {
     const { jsPDF } = window.jspdf;
