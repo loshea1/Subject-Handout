@@ -186,14 +186,20 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
                     data: {
                         labels: labels,
                         datasets: [
-                            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
-                            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
-                            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
-                            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 }
+                            //{ label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            //{ label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            //{ label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 },
+                            //{ label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)', barPercentage: 0.45, categoryPercentage: 0.5 }
+
+                            { label: 'Week 1 - Pre', data: week1Pre, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+                            { label: 'Week 1 - Post', data: week1Post, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
+                            { label: 'Week 2 - Pre', data: week2Pre, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                            { label: 'Week 2 - Post', data: week2Post, backgroundColor: 'rgba(54, 119, 235, 0.7)' }
                         ]
                     },
                     options: {
-                        responsive: true,
+                        responsive: false,
+                      maintainAspectRatio: false,
                         plugins: {
                             title: { display: true, text: g.label || "Assessment" },
                             legend: { position: 'bottom' }
