@@ -178,12 +178,10 @@ groups.forEach((g, index) => {
     canvas.style.margin = "20px auto";
     chartsContainer.appendChild(canvas);
 
-    // Render chart
-    new Chart(canvas, {
-        type: 'bar',
-        // Define labels from numeric metrics
+// Define labels for this group
 const labels = numericMetrics.map(m => m.name);
 
+// Render chart
 new Chart(canvas, {
     type: 'bar',
     data: {
@@ -206,9 +204,10 @@ new Chart(canvas, {
         }
     }
 });
-}
 
 });
+
+
 
 
 document.getElementById('saveBtn').addEventListener('click', async function () {
