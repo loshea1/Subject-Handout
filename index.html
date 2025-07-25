@@ -155,7 +155,7 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
 
           // Create charts for each assessment
 document.getElementById('chartsContainer')?.remove(); // Remove old charts if any
-let chartsHTML = '<div id="chartsContainer"><h3>Visual Comparison (Week 1 vs Week 2)</h3></div>';
+let chartsHTML = '<div id="chartsContainer"><h3>Visual Comparison</h3></div>';
 document.body.insertAdjacentHTML('beforeend', chartsHTML);
 const chartsContainer = document.getElementById('chartsContainer');
 
@@ -164,16 +164,17 @@ groups.forEach((g, index) => {
     const numericMetrics = g.metrics.filter(m => !m.isText);
     if (numericMetrics.length === 0) return;
 
-    // Prepare data
-    const labels = numericMetrics.map(m => m.name);
-    const week1Values = numericMetrics.map(m => avg(week1.map(r => parseFloat(r[m.col]) || NaN)));
-    const week2Values = numericMetrics.map(m => avg(week2.map(r => parseFloat(r[m.col]) || NaN)));
+ // Extract Pre and Post values for each metric
+    const week1Pre = numericMetrics.map(m => parseFloat(week1[0][m.col]) || NaN);
+    const week1Post = numericMetrics.map(m => parseFloat(week1[1][m.col]) || NaN);
+    const week2Pre = numericMetrics.map(m => parseFloat(week2[0][m.col]) || NaN);
+    const week2Post = numericMetrics.map(m => parseFloat(week2[1][m.col]) || NaN);
 
     // Create canvas
     const canvasId = `chart_${index}`;
     const canvas = document.createElement('canvas');
     canvas.id = canvasId;
-    canvas.style.maxWidth = "600px";
+    canvas.style.maxWidth = "700px";
     canvas.style.margin = "20px auto";
     chartsContainer.appendChild(canvas);
 
@@ -183,13 +184,18 @@ groups.forEach((g, index) => {
         data: {
             labels: labels,
             datasets: [
-                { label: 'Week 1', data: week1Values, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                { label: 'Week 2', data: week2Values, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                { label: 'Week 1 - Pre', data: week1Values, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+                { label: 'Week 1 - Post', data: week1Values, backgroundColor: 'rgba(255, 56, 132, 0.7)' },
+                { label: 'Week 2 - Pre', data: week2Values, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: 'Week 2 - Post', data: week1Values, backgroundColor: 'rgba(54, 119, 235, 0.7)' },
             ]
         },
         options: {
             responsive: true,
-            plugins: { title: { display: true, text: g.label || "Assessment" } },
+            plugins: { 
+                title: { display: true, text: g.label || "Assessment" },
+                legend: { position: 'bottom' }
+            },
             scales: {
                 y: { beginAtZero: true }
             }
