@@ -139,37 +139,39 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     });
 });
 
+
+
 document.getElementById('saveBtn').addEventListener('click', async function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape', 'pt', 'a4');
 
-    // Capture tables container
     const tablesElement = document.getElementById('tablesContainer');
-    const tablesCanvas = await html2canvas(tablesElement, { scale: 0.9 });
+    const tablesCanvas = await html2canvas(tablesElement, { scale: 1.2 });
     const imgDataTables = tablesCanvas.toDataURL('image/png');
 
-    // Fit tables into landscape A4
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const imgWidth = pageWidth - 40;
-    const imgHeight = (tablesCanvas.height * imgWidth) / tablesCanvas.width;
+    const pageWidthLandscape = doc.internal.pageSize.getWidth();
+    const pageHeightLandscape = doc.internal.pageSize.getHeight();
+    const imgWidthTables = pageWidthLandscape - 40;
+    const imgHeightTables = (tablesCanvas.height * imgWidthTables) / tablesCanvas.width;
 
-    doc.addImage(imgDataTables, 'PNG', 20, 20, imgWidth, imgHeight);
+    doc.addImage(imgDataTables, 'PNG', 20, 20, imgWidthTables, imgHeightTables);
 
-    // Add summary on new page
     doc.addPage('a4', 'portrait');
+
     const summaryElement = document.getElementById('summary');
-    const summaryCanvas = await html2canvas(summaryElement, { scale: 1 });
+    const summaryCanvas = await html2canvas(summaryElement, { scale: 1.5 });
     const imgDataSummary = summaryCanvas.toDataURL('image/png');
 
-    const sumImgWidth = pageWidth - 40;
-    const sumImgHeight = (summaryCanvas.height * sumImgWidth) / summaryCanvas.width;
-    doc.addImage(imgDataSummary, 'PNG', 20, 20, sumImgWidth, sumImgHeight);
+    const pageWidthPortrait = doc.internal.pageSize.getWidth();
+    const imgWidthSummary = pageWidthPortrait - 40;
+    const imgHeightSummary = (summaryCanvas.height * imgWidthSummary) / summaryCanvas.width;
 
-    // Save PDF
+    doc.addImage(imgDataSummary, 'PNG', 20, 20, imgWidthSummary, imgHeightSummary);
+
     doc.save('comparison_report.pdf');
     document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
 });
+
 
 function createTable(groups, rows) {
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
