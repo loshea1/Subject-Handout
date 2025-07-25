@@ -259,7 +259,7 @@ function createTable(groups, rows) {
                 html += `<td>${isNaN(follow) ? '-' : follow.toFixed(2)}</td>`;
 
                 let postChange = (!isNaN(pre) && !isNaN(post) && pre !== 0) ? ((post - pre) / pre * 100).toFixed(2) + "%" : "-";
-                let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '';
+                let postClass = parseFloat(postChange) > 0 ? 'class="green"' : (parseFloat(postChange) < 0 ? 'class="red"' : '');
                 html += `<td ${postClass}>${postChange}</td>`;
             }
             html += "</tr>";
