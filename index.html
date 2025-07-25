@@ -5,7 +5,7 @@
 <title>Week 1 and Week 2 Comparison</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   body { font-family: Arial; margin: 20px; }
@@ -13,7 +13,8 @@
   table {
     border-collapse: collapse;
     margin: 15px 0;
-    width: auto;
+    width: 100%; /* Responsive width */
+    max-width: 100%;
   }
   th, td {
     border: 1px solid #ccc;
@@ -26,13 +27,15 @@
   .green { background: #d4edda; }
   .red { background: #f8d7da; }
 
+  /* Flex for large screens, stack on smaller */
   .tables-container {
     display: flex;
-    justify-content: space-between;
-    gap: 40px;
+    flex-wrap: wrap;
+    gap: 20px;
   }
   .table-section {
-    flex: 1;
+    flex: 1 1 500px; /* Grow but min width 500px */
+    box-sizing: border-box;
   }
 </style>
 </head>
@@ -47,7 +50,6 @@
     <button id="saveBtn" style="padding:10px 15px;">Save as PDF</button>
     <p id="saveMsg" style="color: green; font-weight: bold; margin: 0;"></p>
 </div>
-
 
 <script>
 document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -139,14 +141,13 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     });
 });
 
-
-
 document.getElementById('saveBtn').addEventListener('click', async function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('landscape', 'pt', 'a4');
 
+    // Capture tables container
     const tablesElement = document.getElementById('tablesContainer');
-    const tablesCanvas = await html2canvas(tablesElement, { scale: 1.2 });
+    const tablesCanvas = await html2canvas(tablesElement, { scale: 2 }); // high quality
     const imgDataTables = tablesCanvas.toDataURL('image/png');
 
     const pageWidthLandscape = doc.internal.pageSize.getWidth();
@@ -159,7 +160,7 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
     doc.addPage('a4', 'portrait');
 
     const summaryElement = document.getElementById('summary');
-    const summaryCanvas = await html2canvas(summaryElement, { scale: 1.5 });
+    const summaryCanvas = await html2canvas(summaryElement, { scale: 2 });
     const imgDataSummary = summaryCanvas.toDataURL('image/png');
 
     const pageWidthPortrait = doc.internal.pageSize.getWidth();
@@ -171,7 +172,6 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
     doc.save('comparison_report.pdf');
     document.getElementById('saveMsg').textContent = "✅ PDF has been saved to your downloads folder!";
 });
-
 
 function createTable(groups, rows) {
     let html = "<table><tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>";
