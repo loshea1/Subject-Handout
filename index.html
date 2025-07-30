@@ -127,29 +127,83 @@ document.getElementById('addGroupBtn').addEventListener('click',()=>{
   enableDragDrop();
 });
 
-function enableDragDrop(){
-  const items=document.querySelectorAll('.metrics-item');
-  const dropzones=document.querySelectorAll('.dropzone,#metricsList');
-  items.forEach(it=>{
-    it.addEventListener('dragstart',e=>{
-      e.dataTransfer.setData('text/plain',it.dataset.metric);
-      e.dataTransfer.setData('html',it.outerHTML);
-      it.classList.add('dragging');
-    });
-    it.addEventListener('dragend',()=>it.classList.remove('dragging'));
+function enableDragDrop() {
+  const metricsContainer = document.getElementById('metricSelection');
+
+  metricsContainer.addEventListener('dragstart', e => {
+    if (e.target.classList.contains('metrics-item')) {
+      e.dataTransfer.setData('text/plain', e.target.dataset.metric);
+      e.target.classList.add('dragging');
+    }
   });
-  dropzones.forEach(zone=>{
-    zone.addEventListener('dragover',e=>{e.preventDefault();});
-    zone.addEventListener('drop',e=>{
+
+  metricsContainer.addEventListener('dragend', e => {
+    if (e.target.classList.contains('metrics-item')) {
+      e.target.classList.remove('dragging');
+    }
+  });
+
+  metricsContainer.addEventListener('dragover', e => {
+    if (e.target.classList.contains('dropzone') || e.target.id === 'metricsList') {
       e.preventDefault();
-      const metric=e.dataTransfer.getData('text/plain');
-      if(!zone.querySelector(`[data-metric="${metric}"]`)){
-        zone.insertAdjacentHTML('beforeend',`<div class="metrics-item" draggable="true" data-metric="${metric}">${metric}</div>`);
-      }
-      updateGroups();
-      enableDragDrop();
-    });
+    }
   });
+
+  metricsContainer.addEventListener('drop', e => {
+    e.preventDefault();
+    const metric = e.dataTransfer.getData('text/plain');
+    let dropTarget = e.target;
+
+    // If dropping on a child, move to parent container
+    if (!dropTarget.classList.contains('dropzone') && dropTarget.id !== 'metricsList') {
+      dropTarget = dropTarget.closest('.dropzone') || dropTarget.closest('#metricsList');
+    }
+
+    if (dropTarget && !dropTarget.querySelector(`[data-metric="${metric}"]`)) {
+      // Remove from old parent
+      const draggedItem = metricsContainer.querySelector(`.metrics-item[data-metric="${metric}"]`);
+      if (draggedItem) draggedItem.remove();
+
+      // Add to new parent
+      dropTarget.insertAdjacentHTML('beforeend',
+        `<div class="metrics-item" draggable="true" data-metric="${metric}">${metric}</div>`
+      );
+
+      updateGroups();
+    }
+  });
+}
+
+function enableInlineEdit() {
+  const metricsContainer = document.getElementById('metricSelection');
+
+  metricsContainer.addEventListener('dblclick', e => {
+    if (e.target.classList.contains('metrics-item')) {
+      const currentName = e.target.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentName;
+      input.style.width = '90%';
+      input.classList.add('edit-input');
+
+      e.target.innerHTML = '';
+      e.target.appendChild(input);
+      input.focus();
+
+      input.addEventListener('blur', () => saveName(e.target, input.value));
+      input.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') saveName(e.target, input.value);
+      });
+    }
+  });
+
+  function saveName(container, newName) {
+    newName = newName.trim();
+    if (newName === '') newName = 'Unnamed Metric';
+    container.dataset.metric = newName;
+    container.textContent = newName;
+    updateGroups();
+  }
 }
 
 function updateGroups(){
