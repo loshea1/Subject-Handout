@@ -1,303 +1,191 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Dynamic Week Comparison</title>
+<title>Custom Week Comparison</title>
+
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
-  h2 { margin-top: 20px; }
-
-  /* Drag and drop */
+  h2, h3 { margin-top: 20px; }
   #dropZone {
-    width: 100%; padding: 20px; text-align: center;
-    border: 2px dashed #aaa; border-radius: 8px; color: #555;
-    margin-bottom: 15px;
+    border: 2px dashed #999;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    background: #f9f9f9;
+    cursor: pointer;
   }
-  #dropZone.dragover { background: #eef; }
-
-  .controls { margin-top: 20px; }
-  .controls label { display: block; margin: 8px 0 4px; }
-
-  .metrics-container {
-    display: flex; gap: 20px; margin-top: 15px;
-  }
-  .metrics-list, .groups-list {
-    border: 1px solid #ccc; border-radius: 6px; padding: 10px;
-    width: 45%; min-height: 200px;
-  }
-  .metrics-item {
-    padding: 5px; margin: 4px 0; background: #f4f4f4; cursor: grab; border-radius: 4px;
-  }
-  .group-box {
-    border: 2px dashed #bbb; border-radius: 6px; padding: 10px;
-    margin-bottom: 10px;
-  }
-  .group-title { font-weight: bold; margin-bottom: 5px; }
-
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+  .tables-container { display: flex; gap: 20px; flex-wrap: wrap; }
+  table { border-collapse: collapse; width: 100%; max-width: 600px; font-size: 14px; }
+  th, td { border: 1px solid #ccc; padding: 6px; text-align: center; white-space: nowrap; }
   th { background: #f4f4f4; }
-
-  .tables-container { display: flex; gap: 20px; margin-top: 20px; }
-  .table-section { flex: 1; }
-
-  #chartsContainer { margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-  #chartsContainer canvas { background: #fff; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-
-  #legend { text-align: center; margin-top: 15px; font-weight: bold; }
+  .group { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 6px; background: #fefefe; }
+  .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .delete-group { background: #ff4d4d; color: white; border: none; padding: 3px 8px; cursor: pointer; border-radius: 4px; }
+  .metric-list { list-style: none; padding: 0; margin: 0; }
+  .metrics-item { padding: 5px; border: 1px solid #ccc; margin: 2px 0; background: #fafafa; cursor: grab; }
+  .drag-over { background: #d0f0ff; }
+  #chartsContainer { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center; }
+  #chartsContainer canvas { background: #fff; padding: 5px; border-radius: 6px; width: 350px !important; height: 250px !important; }
+  .legend { text-align: center; margin-top: 10px; font-size: 14px; }
+  .legend span { margin: 0 10px; }
   #saveBtn { margin-top: 20px; padding: 10px 15px; }
 </style>
 </head>
 <body>
-<h2>Compare Weeks</h2>
 
-<div id="dropZone">Drag & Drop CSV here or click to upload<input type="file" id="fileInput" accept=".csv" style="display:none;"></div>
+<h2>Upload CSV File</h2>
+<div id="dropZone">Drag and Drop CSV Here or Click to Upload</div>
+<input type="file" id="csvFile" accept=".csv" style="display:none;" />
 
-<div class="controls" id="setupControls" style="display:none;">
-  <label>Rows per week: <input type="number" id="rowsPerWeek" value="3" style="width:60px;"></label>
-  <label>Session Labels (comma-separated): <input type="text" id="sessionLabels" value="Pre,Post,Follow-up" style="width:300px;"></label>
-  <button id="configureBtn">Configure Metrics</button>
+<div>
+  <label>Week 1 Dates (comma separated):</label><br>
+  <input type="text" id="week1Dates" placeholder="e.g. 2025-07-01,2025-07-02"><br><br>
+  <label>Week 2 Dates (comma separated):</label><br>
+  <input type="text" id="week2Dates" placeholder="e.g. 2025-07-15,2025-07-16">
 </div>
 
-<div id="metricSelection" style="display:none;">
-  <h3>Step 2: Organize Metrics (Drag to Groups)</h3>
-  <div class="metrics-container">
-    <div class="metrics-list" id="metricsList"><strong>Available Metrics</strong></div>
-    <div class="groups-list" id="groupsList">
-      <button id="addGroupBtn">+ Add Group</button>
-    </div>
-  </div>
-  <button id="generateBtn" style="margin-top:15px;">Generate Tables & Charts</button>
-</div>
+<h3>Organize Metrics</h3>
+<div id="metricSelection"></div>
 
 <div id="output"></div>
+<div id="summary" class="summary"></div>
 <div id="chartsContainer"></div>
-<div id="legend"></div>
-<button id="saveBtn" style="display:none;">Save as PDF</button>
+<div class="legend">
+  <span style="color:#ff6384;">■ Week 1 Pre</span>
+  <span style="color:#ff3864;">■ Week 1 Post</span>
+  <span style="color:#36a2eb;">■ Week 2 Pre</span>
+  <span style="color:#3677eb;">■ Week 2 Post</span>
+</div>
+
+<button id="saveBtn">Save as PDF</button>
+<p id="saveMsg" style="color: green; font-weight: bold;"></p>
 
 <script>
-let parsedData = [];
-let headers = [];
-let groups = [];
-const chartColors = ['#ff6384','#ff80a0','#36a2eb','#5da6f2'];
+let rawData = [], headers = [];
+let groups = []; // [{name:"Group", metrics:["metric1","metric2"]}]
 
 const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
+const fileInput = document.getElementById('csvFile');
 
-dropZone.addEventListener('click', ()=>fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background="#eef"; });
+dropZone.addEventListener('dragleave', () => dropZone.style.background="#f9f9f9");
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  dropZone.style.background="#f9f9f9";
+  handleFile(e.dataTransfer.files[0]);
 });
 fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
 
-function handleFile(file){
-  Papa.parse(file,{header:true,complete:function(res){
-    parsedData = res.data.filter(row => Object.values(row).some(val => val.trim() !== ''));
-    headers = res.meta.fields;
-    document.getElementById('setupControls').style.display='block';
-  }});
+function handleFile(file) {
+  Papa.parse(file, {
+    header: true,
+    complete: function(results) {
+      headers = results.meta.fields;
+      rawData = results.data.filter(r => r[headers[0]]); // remove empty rows
+      initMetricSelection();
+    }
+  });
 }
 
-document.getElementById('configureBtn').addEventListener('click',()=>{
-  const metricsList = document.getElementById('metricsList');
-  metricsList.innerHTML='<strong>Available Metrics</strong>';
-  headers.forEach(h=>{
-    metricsList.innerHTML += `<div class="metrics-item" draggable="true" data-metric="${h}">${h}</div>`;
-  });
-  document.getElementById('metricSelection').style.display='block';
-  enableDragDrop();
-});
+function initMetricSelection() {
+  const container = document.getElementById('metricSelection');
+  container.innerHTML = "<h4>Drag metrics into groups (Double-click to rename metric)</h4>";
 
-document.getElementById('addGroupBtn').addEventListener('click',()=>{
-  const groupId = 'group'+(groups.length+1);
-  groups.push({id:groupId,name:'Group '+(groups.length+1),metrics:[]});
-  const gDiv = document.createElement('div');
-  gDiv.className='group-box';
-  gDiv.id=groupId;
-  gDiv.innerHTML=`<div class="group-title" contenteditable="true">Group ${groups.length}</div><div class="dropzone"></div>`;
-  document.getElementById('groupsList').appendChild(gDiv);
+  const unassignedDiv = document.createElement('div');
+  unassignedDiv.className = 'group';
+  unassignedDiv.innerHTML = `<div class="group-header"><span class="group-name">Unassigned</span></div><ul class="metric-list" id="unassigned"></ul>`;
+  container.appendChild(unassignedDiv);
+
+  headers.forEach(h => {
+    const li = document.createElement('li');
+    li.textContent = h;
+    li.className = 'metrics-item';
+    li.setAttribute('draggable', 'true');
+    li.addEventListener('dblclick', () => {
+      const newName = prompt('Rename metric:', li.textContent);
+      if (newName) li.textContent = newName;
+    });
+    unassignedDiv.querySelector('.metric-list').appendChild(li);
+  });
+
   enableDragDrop();
-});
+  addGroupButton();
+}
+
+function addGroupButton() {
+  const btn = document.createElement('button');
+  btn.textContent = "Add Group";
+  btn.style.margin = "10px 0";
+  btn.onclick = () => {
+    const name = prompt('Enter new group name:');
+    if (name) {
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'group';
+      groupDiv.innerHTML = `
+        <div class="group-header">
+          <span class="group-name">${name}</span>
+          <button class="delete-group">✖</button>
+        </div>
+        <ul class="metric-list"></ul>
+      `;
+      document.getElementById('metricSelection').appendChild(groupDiv);
+
+      groupDiv.querySelector('.delete-group').addEventListener('click', () => {
+        if (confirm(`Delete group "${name}"?`)) groupDiv.remove();
+      });
+
+      enableDragDrop();
+    }
+  };
+  document.getElementById('metricSelection').appendChild(btn);
+}
 
 function enableDragDrop() {
-  const metricsContainer = document.getElementById('metricSelection');
-
-  metricsContainer.addEventListener('dragstart', e => {
-    if (e.target.classList.contains('metrics-item')) {
-      e.dataTransfer.setData('text/plain', e.target.dataset.metric);
-      e.target.classList.add('dragging');
-    }
+  document.querySelectorAll('.metrics-item').forEach(item => {
+    item.addEventListener('dragstart', e => e.dataTransfer.setData('text', e.target.textContent));
   });
 
-  metricsContainer.addEventListener('dragend', e => {
-    if (e.target.classList.contains('metrics-item')) {
-      e.target.classList.remove('dragging');
-    }
-  });
-
-  metricsContainer.addEventListener('dragover', e => {
-    if (e.target.classList.contains('dropzone') || e.target.id === 'metricsList') {
+  document.querySelectorAll('.metric-list').forEach(list => {
+    list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
+    list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
+    list.addEventListener('drop', e => {
       e.preventDefault();
-    }
-  });
-
-  metricsContainer.addEventListener('drop', e => {
-    e.preventDefault();
-    const metric = e.dataTransfer.getData('text/plain');
-    let dropTarget = e.target;
-
-    // If dropping on a child, move to parent container
-    if (!dropTarget.classList.contains('dropzone') && dropTarget.id !== 'metricsList') {
-      dropTarget = dropTarget.closest('.dropzone') || dropTarget.closest('#metricsList');
-    }
-
-    if (dropTarget && !dropTarget.querySelector(`[data-metric="${metric}"]`)) {
-      // Remove from old parent
-      const draggedItem = metricsContainer.querySelector(`.metrics-item[data-metric="${metric}"]`);
-      if (draggedItem) draggedItem.remove();
-
-      // Add to new parent
-      dropTarget.insertAdjacentHTML('beforeend',
-        `<div class="metrics-item" draggable="true" data-metric="${metric}">${metric}</div>`
-      );
-
-      updateGroups();
-    }
-  });
-}
-
-function enableInlineEdit() {
-  const metricsContainer = document.getElementById('metricSelection');
-
-  metricsContainer.addEventListener('dblclick', e => {
-    if (e.target.classList.contains('metrics-item')) {
-      const currentName = e.target.textContent;
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = currentName;
-      input.style.width = '90%';
-      input.classList.add('edit-input');
-
-      e.target.innerHTML = '';
-      e.target.appendChild(input);
-      input.focus();
-
-      input.addEventListener('blur', () => saveName(e.target, input.value));
-      input.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter') saveName(e.target, input.value);
-      });
-    }
-  });
-
-  function saveName(container, newName) {
-    newName = newName.trim();
-    if (newName === '') newName = 'Unnamed Metric';
-    container.dataset.metric = newName;
-    container.textContent = newName;
-    updateGroups();
-  }
-}
-
-function updateGroups(){
-  groups.forEach(g=>{
-    const div=document.getElementById(g.id);
-    g.name=div.querySelector('.group-title').innerText;
-    g.metrics=[...div.querySelectorAll('.metrics-item')].map(m=>m.dataset.metric);
-  });
-}
-
-document.getElementById('generateBtn').addEventListener('click',()=>{
-  updateGroups();
-  generateTablesAndCharts();
-  document.getElementById('saveBtn').style.display='block';
-});
-
-function generateTablesAndCharts(){
-  const rowsPerWeek=parseInt(document.getElementById('rowsPerWeek').value);
-  const sessionLabels=document.getElementById('sessionLabels').value.split(',').map(s=>s.trim());
-  const numWeeks=Math.floor(parsedData.length/rowsPerWeek);
-  
-  const output=document.getElementById('output');
-  output.innerHTML='';
-  const chartsContainer=document.getElementById('chartsContainer');
-  chartsContainer.innerHTML='';
-  
-  groups.forEach(g=>{
-    let tablesHTML=`<h3>${g.name}</h3><div class="tables-container">`;
-    for(let w=0;w<numWeeks;w++){
-      const weekRows=parsedData.slice(w*rowsPerWeek,(w+1)*rowsPerWeek);
-      tablesHTML+=`<div class="table-section"><h4>Week ${w+1}</h4><table><tr><th>Metric</th>${sessionLabels.map(l=>`<th>${l}</th>`).join('')}</tr>`;
-      g.metrics.forEach(m=>{
-        tablesHTML+=`<tr><td>${m}</td>`;
-        sessionLabels.forEach((_,i)=>{
-          const val=parseFloat(weekRows[i][m]);
-          tablesHTML+=`<td>${isNaN(val)?'-':val.toFixed(2)}</td>`;
-        });
-        tablesHTML+='</tr>';
-      });
-      tablesHTML+='</table></div>';
-    }
-    tablesHTML+='</div>';
-    output.innerHTML+=tablesHTML;
-
-    const labels=g.metrics;
-    const datasets=[];
-    for(let w=0;w<numWeeks;w++){
-      sessionLabels.forEach((label,i)=>{
-        const weekRows=parsedData.slice(w*rowsPerWeek,(w+1)*rowsPerWeek);
-        datasets.push({
-          label:`Week ${w+1} - ${label}`,
-          data:g.metrics.map(m=>parseFloat(weekRows[i][m])||0),
-          backgroundColor: chartColors[(w*sessionLabels.length+i)%chartColors.length]
-        });
-      });
-    }
-    const canvas=document.createElement('canvas');
-    chartsContainer.appendChild(canvas);
-    new Chart(canvas,{
-      type:'bar',
-      data:{labels:labels,datasets:datasets},
-      options:{
-        responsive:true,
-        plugins:{legend:{display:false},title:{display:true,text:g.name}},
-        scales:{x:{stacked:false},y:{beginAtZero:true}}
-      }
+      const text = e.dataTransfer.getData('text');
+      const dragged = Array.from(document.querySelectorAll('.metrics-item')).find(el => el.textContent === text);
+      if (dragged) list.appendChild(dragged);
+      list.classList.remove('drag-over');
     });
   });
-
-  document.getElementById('legend').innerHTML='Global Legend: '+groups.map((_,idx)=>`<span style="color:${chartColors[idx%chartColors.length]}">■ Week ${idx+1}</span>`).join(' ');
 }
 
-document.getElementById('saveBtn').addEventListener('click',async()=>{
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF('landscape','pt','a4');
-  const pageWidth=doc.internal.pageSize.getWidth();
-  const pageHeight=doc.internal.pageSize.getHeight();
+document.getElementById('saveBtn').addEventListener('click', async function () {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape', 'pt', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-  const combinedElement=document.createElement('div');
+  const combinedElement = document.createElement('div');
   combinedElement.appendChild(document.getElementById('output').cloneNode(true));
-  const combinedCanvas=await html2canvas(combinedElement,{scale:2});
-  const imgDataCombined=combinedCanvas.toDataURL('image/png');
-  const imgWidthCombined=pageWidth-40;
-  const imgHeightCombined=(combinedCanvas.height*imgWidthCombined)/combinedCanvas.width;
-  doc.addImage(imgDataCombined,'PNG',20,20,imgWidthCombined,imgHeightCombined);
+  combinedElement.appendChild(document.getElementById('summary').cloneNode(true));
 
-  doc.addPage('a4','landscape');
-  const chartsCanvas=await html2canvas(document.getElementById('chartsContainer'),{scale:2});
-  const imgDataCharts=chartsCanvas.toDataURL('image/png');
-  const imgWidthCharts=pageWidth-40;
-  const imgHeightCharts=pageHeight-40;
-  doc.addImage(imgDataCharts,'PNG',20,20,imgWidthCharts,imgHeightCharts);
+  const combinedCanvas = await html2canvas(combinedElement, { scale: 2 });
+  const imgDataCombined = combinedCanvas.toDataURL('image/png');
+  doc.addImage(imgDataCombined, 'PNG', 20, 20, pageWidth - 40, (combinedCanvas.height * (pageWidth - 40)) / combinedCanvas.width);
+
+  doc.addPage();
+  const chartsCanvas = await html2canvas(document.getElementById('chartsContainer'), { scale: 2 });
+  doc.addImage(chartsCanvas.toDataURL('image/png'), 'PNG', 20, 20, pageWidth - 40, pageHeight - 40);
 
   doc.save('comparison_report.pdf');
+  document.getElementById('saveMsg').textContent = "✅ PDF saved!";
 });
 </script>
 </body>
