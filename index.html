@@ -35,7 +35,8 @@
   #chartsContainer canvas { background: #fff; padding: 5px; border-radius: 6px; width: 350px !important; height: 250px !important; }
   .legend { text-align: center; margin-top: 10px; font-size: 14px; }
   .legend span { margin: 0 10px; }
-  #saveBtn { margin-top: 20px; padding: 10px 15px; }
+  #saveBtn, #generateBtn { margin-top: 20px; padding: 10px 15px; }
+  .summary { margin-top: 20px; background: #eef; padding: 10px; border-radius: 5px; }
 </style>
 </head>
 <body>
@@ -54,6 +55,8 @@
 <h3>Organize Metrics</h3>
 <div id="metricSelection"></div>
 
+<button id="generateBtn">Generate Comparison</button>
+
 <div id="output"></div>
 <div id="summary" class="summary"></div>
 <div id="chartsContainer"></div>
@@ -69,7 +72,6 @@
 
 <script>
 let rawData = [], headers = [];
-let groups = []; // [{name:"Group", metrics:["metric1","metric2"]}]
 
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('csvFile');
@@ -166,6 +168,101 @@ function enableDragDrop() {
   });
 }
 
+// ✅ Generate Comparison
+document.getElementById('generateBtn').addEventListener('click', () => {
+  const week1Dates = document.getElementById('week1Dates').value.split(',').map(d => d.trim());
+  const week2Dates = document.getElementById('week2Dates').value.split(',').map(d => d.trim());
+
+  const groupedData = [];
+  document.querySelectorAll('#metricSelection .group').forEach(group => {
+    const name = group.querySelector('.group-name').textContent;
+    if (name !== 'Unassigned') {
+      const metrics = Array.from(group.querySelectorAll('.metrics-item')).map(li => li.textContent);
+      if (metrics.length > 0) groupedData.push({ name, metrics });
+    }
+  });
+
+  buildTablesCharts(groupedData, week1Dates, week2Dates);
+});
+
+function buildTablesCharts(groups, week1Dates, week2Dates) {
+  const outputDiv = document.getElementById('output');
+  const chartsContainer = document.getElementById('chartsContainer');
+  const summaryDiv = document.getElementById('summary');
+
+  outputDiv.innerHTML = "";
+  chartsContainer.innerHTML = "";
+  summaryDiv.innerHTML = "";
+
+  let summaryItems = [];
+
+  groups.forEach(group => {
+    const groupTable = document.createElement('table');
+    let tableHTML = `<h3>${group.name}</h3>`;
+    tableHTML += `<table><tr><th>Metric</th><th>Week1 Pre</th><th>Week1 Post</th><th>Week2 Pre</th><th>Week2 Post</th></tr>`;
+
+    const chartLabels = [];
+    const w1PreVals = [], w1PostVals = [], w2PreVals = [], w2PostVals = [];
+
+    group.metrics.forEach(metric => {
+      chartLabels.push(metric);
+
+      const w1Pre = avg(rawData.filter(r => week1Dates.includes(r[headers[0]])).map(r => parseFloat(r[metric]) || NaN));
+      const w1Post = avg(rawData.filter(r => week1Dates.includes(r[headers[0]])).map(r => parseFloat(r[metric]) || NaN));
+      const w2Pre = avg(rawData.filter(r => week2Dates.includes(r[headers[0]])).map(r => parseFloat(r[metric]) || NaN));
+      const w2Post = avg(rawData.filter(r => week2Dates.includes(r[headers[0]])).map(r => parseFloat(r[metric]) || NaN));
+
+      w1PreVals.push(w1Pre);
+      w1PostVals.push(w1Post);
+      w2PreVals.push(w2Pre);
+      w2PostVals.push(w2Post);
+
+      tableHTML += `<tr>
+        <td>${metric}</td>
+        <td>${isNaN(w1Pre) ? '-' : w1Pre.toFixed(2)}</td>
+        <td>${isNaN(w1Post) ? '-' : w1Post.toFixed(2)}</td>
+        <td>${isNaN(w2Pre) ? '-' : w2Pre.toFixed(2)}</td>
+        <td>${isNaN(w2Post) ? '-' : w2Post.toFixed(2)}</td>
+      </tr>`;
+
+      if (!isNaN(w1Pre) && !isNaN(w2Post)) {
+        summaryItems.push(`${metric}: Change from W1 Pre (${w1Pre.toFixed(2)}) to W2 Post (${w2Post.toFixed(2)})`);
+      }
+    });
+    tableHTML += `</table>`;
+    outputDiv.innerHTML += tableHTML;
+
+    const canvas = document.createElement('canvas');
+    chartsContainer.appendChild(canvas);
+
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          { label: 'W1 Pre', data: w1PreVals, backgroundColor: '#ff6384' },
+          { label: 'W1 Post', data: w1PostVals, backgroundColor: '#ff3864' },
+          { label: 'W2 Pre', data: w2PreVals, backgroundColor: '#36a2eb' },
+          { label: 'W2 Post', data: w2PostVals, backgroundColor: '#3677eb' }
+        ]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  });
+
+  summaryDiv.innerHTML = `<h3>Summary</h3><ul>${summaryItems.map(s => `<li>${s}</li>`).join('')}</ul>`;
+}
+
+function avg(arr) {
+  const valid = arr.filter(x => !isNaN(x));
+  return valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : NaN;
+}
+
+// ✅ Save PDF
 document.getElementById('saveBtn').addEventListener('click', async function () {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape', 'pt', 'a4');
@@ -177,8 +274,7 @@ document.getElementById('saveBtn').addEventListener('click', async function () {
   combinedElement.appendChild(document.getElementById('summary').cloneNode(true));
 
   const combinedCanvas = await html2canvas(combinedElement, { scale: 2 });
-  const imgDataCombined = combinedCanvas.toDataURL('image/png');
-  doc.addImage(imgDataCombined, 'PNG', 20, 20, pageWidth - 40, (combinedCanvas.height * (pageWidth - 40)) / combinedCanvas.width);
+  doc.addImage(combinedCanvas.toDataURL('image/png'), 'PNG', 20, 20, pageWidth - 40, (combinedCanvas.height * (pageWidth - 40)) / combinedCanvas.width);
 
   doc.addPage();
   const chartsCanvas = await html2canvas(document.getElementById('chartsContainer'), { scale: 2 });
