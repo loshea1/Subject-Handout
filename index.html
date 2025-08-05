@@ -27,7 +27,7 @@ h2 { margin-bottom: 10px; }
     gap: 10px;
     margin-bottom: 20px;
 }
-.button-bar button {
+.button-bar button, .button-bar select {
     padding: 10px 15px;
     border: none;
     border-radius: 4px;
@@ -90,29 +90,33 @@ select { padding: 6px; }
 }
 .tables-container {
     display: flex;
-    gap: 20px;
+    flex-wrap: wrap;
     justify-content: flex-start;
-    margin-bottom: 20px;
-}
-.table-block {
-    background: #fff;
-    padding: 10px;
-    border-radius: 6px;
+    gap: 20px;
 }
 table {
     border-collapse: collapse;
-    font-size: 13px;
-    width: 100%;
+    font-size: 14px;
+    margin-bottom: 20px;
+    background: white;
 }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+th, td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    text-align: center;
+}
 th { background: #f4f4f4; }
-.positive { background-color: #d4edda; color: #155724; }
-.negative { background-color: #f8d7da; color: #721c24; }
+.group-title {
+    font-weight: bold;
+    background: #e9ecef;
+    text-align: left;
+    padding-left: 8px;
+}
 #chartsContainer {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    justify-content: flex-start;
+    margin-top: 20px;
 }
 .chart-block {
     border: 1px solid #ccc;
@@ -121,6 +125,11 @@ th { background: #f4f4f4; }
     background: #fff;
     width: 370px;
     cursor: grab;
+}
+.chart-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
 }
 #chartsContainer canvas {
     width: 350px !important;
@@ -151,24 +160,22 @@ th { background: #f4f4f4; }
 </div>
 
 <div id="configSection">
-    <div id="configContent">
-        <div class="flex-container">
-            <div class="panel">
-                <h3>Available Metrics</h3>
-                <ul id="unassigned" class="metric-list"></ul>
-            </div>
-            <div class="panel" id="groupsPanel">
-                <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="margin:0;">Groups</h3>
-                    <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-                </div>
+    <div class="flex-container">
+        <div class="panel">
+            <h3>Available Metrics</h3>
+            <ul id="unassigned" class="metric-list"></ul>
+        </div>
+        <div class="panel" id="groupsPanel">
+            <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Groups</h3>
+                <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
             </div>
         </div>
     </div>
 </div>
 
 <div id="outputSection">
-    <div class="tables-container" id="tablesContainer"></div>
+    <div id="output" class="tables-container"></div>
     <div id="chartsContainer"></div>
     <div class="legend" id="legend">
         <span style="color:#ff6384;">■ Week 1 Pre</span>
@@ -249,8 +256,7 @@ document.getElementById('addGroupBtn').addEventListener('click', () => {
         const newName = prompt('Rename group:', name);
         if (newName) groupDiv.querySelector('.group-name').textContent = newName;
     });
-    const panel = document.getElementById('groupsPanel');
-    panel.insertBefore(groupDiv, panel.children[1]); // Insert at top
+    document.getElementById('groupsPanel').insertBefore(groupDiv, document.querySelector('.group-header-bar').nextSibling);
     enableDragDrop();
 });
 
@@ -271,6 +277,12 @@ function enableDragDrop() {
     });
 }
 
+// Make groups sortable
+Sortable.create(document.getElementById('groupsPanel'), {
+    animation: 150,
+    filter: '.group-header-bar'
+});
+
 document.getElementById('generateBtn').addEventListener('click', () => {
     const groups = [];
     document.querySelectorAll('#groupsPanel .group').forEach(g => {
@@ -287,77 +299,34 @@ document.getElementById('generateBtn').addEventListener('click', () => {
 });
 
 function buildTablesCharts(groups) {
-    const tablesContainer = document.getElementById('tablesContainer');
+    const outputDiv = document.getElementById('output');
     const chartsContainer = document.getElementById('chartsContainer');
-    tablesContainer.innerHTML = '';
+    outputDiv.innerHTML = '';
     chartsContainer.innerHTML = '';
 
-    // Create Week 1 and Week 2 tables side by side
-    const week1Table = document.createElement('div');
-    week1Table.className = 'table-block';
-    week1Table.innerHTML = `<h3>Week 1</h3><table>
-        <tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>
-    </table>`;
-    const week1Body = week1Table.querySelector('table');
-
-    const week2Table = document.createElement('div');
-    week2Table.className = 'table-block';
-    week2Table.innerHTML = `<h3>Week 2</h3><table>
-        <tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>
-    </table>`;
-    const week2Body = week2Table.querySelector('table');
-
     groups.forEach(group => {
-        // Add rows for Week 1
-        const rowCount = group.metrics.length;
-        group.metrics.forEach((m, idx) => {
-            const w1Pre = parseFloat(rawData[0][m]) || NaN;
-            const w1Post = parseFloat(rawData[1][m]) || NaN;
-            const w1Follow = parseFloat(rawData[2]?.[m]) || NaN;
-            const change = (isNaN(w1Pre) || isNaN(w1Post)) ? '-' : (((w1Post - w1Pre) / w1Pre) * 100).toFixed(2);
-            const changeClass = (change !== '-' && parseFloat(change) > 0) ? 'positive' : (change !== '-' ? 'negative' : '');
-
-            const tr = document.createElement('tr');
-            if (idx === 0) {
-                const td = document.createElement('td');
-                td.rowSpan = rowCount;
-                td.textContent = group.name;
-                tr.appendChild(td);
-            }
-            tr.innerHTML += `<td>${m}</td>
-                             <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
-                             <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
-                             <td>${isNaN(w1Follow)?'-':w1Follow.toFixed(2)}</td>
-                             <td class="${changeClass}">${change === '-' ? '-' : change + '%'}</td>`;
-            week1Body.appendChild(tr);
+        // Table
+        let rows = '';
+        group.metrics.forEach(m => {
+            const w1Pre = rawData[0][m] || '-';
+            const w1Post = rawData[1][m] || '-';
+            const w2Pre = rawData[3][m] || '-';
+            const w2Post = rawData[4][m] || '-';
+            rows += `<tr><td>${m}</td><td>${w1Pre}</td><td>${w1Post}</td><td>${w2Pre}</td><td>${w2Post}</td></tr>`;
         });
+        const tableHTML = `
+            <table>
+                <tr><th colspan="5" class="group-title">${group.name}</th></tr>
+                <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
+                ${rows}
+            </table>`;
+        outputDiv.innerHTML += tableHTML;
 
-        // Add rows for Week 2
-        group.metrics.forEach((m, idx) => {
-            const w2Pre = parseFloat(rawData[3][m]) || NaN;
-            const w2Post = parseFloat(rawData[4][m]) || NaN;
-            const w2Follow = parseFloat(rawData[5]?.[m]) || NaN;
-            const change = (isNaN(w2Pre) || isNaN(w2Post)) ? '-' : (((w2Post - w2Pre) / w2Pre) * 100).toFixed(2);
-            const changeClass = (change !== '-' && parseFloat(change) > 0) ? 'positive' : (change !== '-' ? 'negative' : '');
-
-            const tr = document.createElement('tr');
-            if (idx === 0) {
-                const td = document.createElement('td');
-                td.rowSpan = rowCount;
-                td.textContent = group.name;
-                tr.appendChild(td);
-            }
-            tr.innerHTML += `<td>${m}</td>
-                             <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
-                             <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
-                             <td>${isNaN(w2Follow)?'-':w2Follow.toFixed(2)}</td>
-                             <td class="${changeClass}">${change === '-' ? '-' : change + '%'}</td>`;
-            week2Body.appendChild(tr);
-        });
-
-        // Add chart for each group
+        // Chart
+        const numericMetrics = group.metrics.filter(m => !isNaN(parseFloat(rawData[0][m])));
         const chartBlock = document.createElement('div');
         chartBlock.className = 'chart-block';
+        chartBlock.innerHTML = `<div class="chart-title">${group.name}</div>`;
         const canvas = document.createElement('canvas');
         chartBlock.appendChild(canvas);
         chartsContainer.appendChild(chartBlock);
@@ -365,23 +334,108 @@ function buildTablesCharts(groups) {
         new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: group.metrics,
+                labels: numericMetrics,
                 datasets: [
-                    { label: 'W1 Pre', data: group.metrics.map(m => parseFloat(rawData[0][m]) || NaN), backgroundColor: '#ff6384' },
-                    { label: 'W1 Post', data: group.metrics.map(m => parseFloat(rawData[1][m]) || NaN), backgroundColor: '#ff3864' },
-                    { label: 'W2 Pre', data: group.metrics.map(m => parseFloat(rawData[3][m]) || NaN), backgroundColor: '#36a2eb' },
-                    { label: 'W2 Post', data: group.metrics.map(m => parseFloat(rawData[4][m]) || NaN), backgroundColor: '#3677eb' }
+                    { label: 'W1 Pre', data: numericMetrics.map(m => parseFloat(rawData[0][m]) || null), backgroundColor: '#ff6384' },
+                    { label: 'W1 Post', data: numericMetrics.map(m => parseFloat(rawData[1][m]) || null), backgroundColor: '#ff3864' },
+                    { label: 'W2 Pre', data: numericMetrics.map(m => parseFloat(rawData[3][m]) || null), backgroundColor: '#36a2eb' },
+                    { label: 'W2 Post', data: numericMetrics.map(m => parseFloat(rawData[4][m]) || null), backgroundColor: '#3677eb' }
                 ]
             },
-            options: { responsive: false, plugins: { legend: { display: false }, title: { display: true, text: group.name } }, scales: { y: { beginAtZero: true } } }
+            options: { responsive: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
     });
 
-    tablesContainer.appendChild(week1Table);
-    tablesContainer.appendChild(week2Table);
     Sortable.create(chartsContainer, { animation: 150 });
 }
 
+// Save config
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+    const configName = prompt('Enter a name for this configuration:');
+    if (!configName) return;
+
+    const groups = [];
+    document.querySelectorAll('#groupsPanel .group').forEach(g => {
+        const name = g.querySelector('.group-name').textContent;
+        groups.push({ name });
+    });
+
+    let configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    configs[configName] = groups;
+    localStorage.setItem('configs', JSON.stringify(configs));
+    updateConfigDropdown();
+    alert('Configuration saved!');
+});
+
+// Load config
+document.getElementById('loadConfigBtn').addEventListener('click', () => {
+    const selected = document.getElementById('configSelect').value;
+    if (!selected) {
+        alert('Please select a configuration to load.');
+        return;
+    }
+
+    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    const config = configs[selected];
+    if (!config) return;
+
+    document.getElementById('groupsPanel').innerHTML = `
+        <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0;">Groups</h3>
+            <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
+        </div>
+    `;
+    config.forEach(g => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${g.name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => groupDiv.remove());
+        document.getElementById('groupsPanel').appendChild(groupDiv);
+    });
+
+    enableDragDrop();
+
+    // Re-bind Add Group
+    document.getElementById('addGroupBtn').addEventListener('click', () => {
+        const name = prompt('Enter group name:');
+        if (!name) return;
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => groupDiv.remove());
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.querySelector('.group-header-bar').nextSibling);
+        enableDragDrop();
+    });
+});
+
+function updateConfigDropdown() {
+    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    const select = document.getElementById('configSelect');
+    select.innerHTML = '<option value="">Select Configuration</option>';
+    Object.keys(configs).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+}
+
+// Load configs on page load
+updateConfigDropdown();
+
+// Export PDF
 document.getElementById('exportPDFBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
