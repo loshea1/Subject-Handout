@@ -36,7 +36,8 @@ h2 { margin-bottom: 10px; }
 }
 #generateBtn { background: #28a745; color: white; }
 #saveConfigBtn, #loadConfigBtn { background: #6c757d; color: white; }
-#exportPDFBtn { background: #007bff; color: white; }
+#exportPDFBtn { background: #007bff; color: white; display:none; }
+select { padding: 6px; }
 #configSection {
     background: #fff;
     padding: 15px;
@@ -127,15 +128,6 @@ th { background: #f4f4f4; }
     display: none;
 }
 .legend span { margin: 0 10px; }
-.toggle-btn {
-    background: #007bff;
-    color: white;
-    padding: 8px;
-    border: none;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    cursor: pointer;
-}
 </style>
 </head>
 <body>
@@ -147,12 +139,14 @@ th { background: #f4f4f4; }
 <div class="button-bar">
     <button id="generateBtn">Generate Comparison</button>
     <button id="saveConfigBtn">Save Configuration</button>
+    <select id="configSelect">
+        <option value="">Select Configuration</option>
+    </select>
     <button id="loadConfigBtn">Load Configuration</button>
     <button id="exportPDFBtn">Save as PDF</button>
 </div>
 
 <div id="configSection">
-    <button class="toggle-btn" id="toggleConfigBtn">Hide Configuration</button>
     <div id="configContent">
         <div class="flex-container">
             <div class="panel">
@@ -277,8 +271,11 @@ document.getElementById('generateBtn').addEventListener('click', () => {
         const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
         if (metrics.length > 0) groups.push({ name, metrics });
     });
-    if (groups.length > 0) document.getElementById('legend').style.display = 'block';
-    document.getElementById('configContent').style.display = 'none'; // Collapse config
+    if (groups.length > 0) {
+        document.getElementById('legend').style.display = 'block';
+        document.getElementById('exportPDFBtn').style.display = 'inline-block';
+    }
+    document.getElementById('configSection').style.display = 'none'; // Auto-hide config
     buildTablesCharts(groups);
 });
 
@@ -334,17 +331,101 @@ function buildTablesCharts(groups) {
     Sortable.create(chartsContainer, { animation: 150 });
 }
 
-document.getElementById('toggleConfigBtn').addEventListener('click', () => {
-    const content = document.getElementById('configContent');
-    const btn = document.getElementById('toggleConfigBtn');
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        btn.textContent = 'Hide Configuration';
-    } else {
-        content.style.display = 'none';
-        btn.textContent = 'Show Configuration';
-    }
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+    const configName = prompt('Enter a name for this configuration:');
+    if (!configName) return;
+
+    const groups = [];
+    document.querySelectorAll('#groupsPanel .group').forEach(g => {
+        const name = g.querySelector('.group-name').textContent;
+        const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
+        if (metrics.length > 0) groups.push({ name, metrics });
+    });
+
+    let configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    configs[configName] = groups;
+    localStorage.setItem('configs', JSON.stringify(configs));
+    updateConfigDropdown();
+    alert('Configuration saved!');
 });
+
+document.getElementById('loadConfigBtn').addEventListener('click', () => {
+    const selected = document.getElementById('configSelect').value;
+    if (!selected) {
+        alert('Please select a configuration to load.');
+        return;
+    }
+
+    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    const config = configs[selected];
+    if (!config) return;
+
+    // Clear groups
+    document.getElementById('groupsPanel').innerHTML = '<h3>Groups</h3><button id="addGroupBtn" style="margin-bottom:10px;">+ Add Group</button>';
+    populateMetrics();
+
+    config.forEach(g => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${g.name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
+            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+            groupDiv.remove();
+        });
+
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
+
+        g.metrics.forEach(m => {
+            const metricLi = [...document.querySelectorAll('.metrics-item')].find(li => li.textContent === m);
+            if (metricLi) groupDiv.querySelector('.metric-list').appendChild(metricLi);
+        });
+    });
+
+    enableDragDrop();
+    document.getElementById('addGroupBtn').addEventListener('click', () => {
+        const name = prompt('Enter group name:');
+        if (!name) return;
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
+            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+            groupDiv.remove();
+        });
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
+        enableDragDrop();
+    });
+});
+
+function updateConfigDropdown() {
+    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
+    const select = document.getElementById('configSelect');
+    select.innerHTML = '<option value="">Select Configuration</option>';
+    Object.keys(configs).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    });
+}
+
+// Load configs on page load
+updateConfigDropdown();
 
 document.getElementById('exportPDFBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
