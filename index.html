@@ -27,7 +27,7 @@ h2 { margin-bottom: 10px; }
     gap: 10px;
     margin-bottom: 20px;
 }
-.button-bar button, .button-bar select {
+.button-bar button {
     padding: 10px 15px;
     border: none;
     border-radius: 4px;
@@ -88,35 +88,30 @@ select { padding: 6px; }
     padding: 20px;
     border-radius: 8px;
 }
+.group-output {
+    margin-bottom: 25px;
+}
 .tables-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
     gap: 20px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin-bottom: 15px;
 }
 table {
     border-collapse: collapse;
+    width: 100%;
+    max-width: 350px;
     font-size: 14px;
-    margin-bottom: 20px;
-    background: white;
 }
-th, td {
-    border: 1px solid #ccc;
-    padding: 6px;
-    text-align: center;
-}
+th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 th { background: #f4f4f4; }
-.group-title {
-    font-weight: bold;
-    background: #e9ecef;
-    text-align: left;
-    padding-left: 8px;
-}
 #chartsContainer {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     margin-top: 20px;
+    justify-content: flex-start;
 }
 .chart-block {
     border: 1px solid #ccc;
@@ -125,11 +120,22 @@ th { background: #f4f4f4; }
     background: #fff;
     width: 370px;
     cursor: grab;
+    position: relative;
 }
-.chart-title {
+.delete-chart {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    line-height: 20px;
     text-align: center;
-    font-weight: bold;
-    margin-bottom: 10px;
+    cursor: pointer;
 }
 #chartsContainer canvas {
     width: 350px !important;
@@ -160,22 +166,24 @@ th { background: #f4f4f4; }
 </div>
 
 <div id="configSection">
-    <div class="flex-container">
-        <div class="panel">
-            <h3>Available Metrics</h3>
-            <ul id="unassigned" class="metric-list"></ul>
-        </div>
-        <div class="panel" id="groupsPanel">
-            <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Groups</h3>
-                <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
+    <div id="configContent">
+        <div class="flex-container">
+            <div class="panel">
+                <h3>Available Metrics</h3>
+                <ul id="unassigned" class="metric-list"></ul>
+            </div>
+            <div class="panel" id="groupsPanel">
+                <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0;">Groups</h3>
+                    <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <div id="outputSection">
-    <div id="output" class="tables-container"></div>
+    <div id="output"></div>
     <div id="chartsContainer"></div>
     <div class="legend" id="legend">
         <span style="color:#ff6384;">■ Week 1 Pre</span>
@@ -235,14 +243,16 @@ function createMetricItem(name, id) {
     return li;
 }
 
-document.getElementById('addGroupBtn').addEventListener('click', () => {
-    const name = prompt('Enter group name:');
-    if (!name) return;
+document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
+
+function addGroup(name = '') {
+    const groupName = name || prompt('Enter group name:');
+    if (!groupName) return;
     const groupDiv = document.createElement('div');
     groupDiv.className = 'group';
     groupDiv.innerHTML = `
         <div class="group-header">
-            <span class="group-name">${name}</span>
+            <span class="group-name">${groupName}</span>
             <button class="delete-group">✖</button>
         </div>
         <ul class="metric-list"></ul>
@@ -253,12 +263,12 @@ document.getElementById('addGroupBtn').addEventListener('click', () => {
         groupDiv.remove();
     });
     groupDiv.querySelector('.group-name').addEventListener('dblclick', () => {
-        const newName = prompt('Rename group:', name);
+        const newName = prompt('Rename group:', groupName);
         if (newName) groupDiv.querySelector('.group-name').textContent = newName;
     });
     document.getElementById('groupsPanel').insertBefore(groupDiv, document.querySelector('.group-header-bar').nextSibling);
     enableDragDrop();
-});
+}
 
 function enableDragDrop() {
     document.querySelectorAll('.metrics-item').forEach(item => {
@@ -276,12 +286,6 @@ function enableDragDrop() {
         });
     });
 }
-
-// Make groups sortable
-Sortable.create(document.getElementById('groupsPanel'), {
-    animation: 150,
-    filter: '.group-header-bar'
-});
 
 document.getElementById('generateBtn').addEventListener('click', () => {
     const groups = [];
@@ -305,28 +309,66 @@ function buildTablesCharts(groups) {
     chartsContainer.innerHTML = '';
 
     groups.forEach(group => {
-        // Table
-        let rows = '';
-        group.metrics.forEach(m => {
-            const w1Pre = rawData[0][m] || '-';
-            const w1Post = rawData[1][m] || '-';
-            const w2Pre = rawData[3][m] || '-';
-            const w2Post = rawData[4][m] || '-';
-            rows += `<tr><td>${m}</td><td>${w1Pre}</td><td>${w1Post}</td><td>${w2Pre}</td><td>${w2Post}</td></tr>`;
-        });
-        const tableHTML = `
-            <table>
-                <tr><th colspan="5" class="group-title">${group.name}</th></tr>
-                <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
-                ${rows}
-            </table>`;
-        outputDiv.innerHTML += tableHTML;
+        // Create tables
+        const groupOutput = document.createElement('div');
+        groupOutput.className = 'group-output';
+        const tablesContainer = document.createElement('div');
+        tablesContainer.className = 'tables-container';
 
-        // Chart
-        const numericMetrics = group.metrics.filter(m => !isNaN(parseFloat(rawData[0][m])));
+        const week1Table = `
+            <table>
+                <thead>
+                    <tr><th colspan="3">${group.name} - Week 1</th></tr>
+                    <tr><th>Metric</th><th>Pre</th><th>Post</th></tr>
+                </thead>
+                <tbody>
+                    ${group.metrics.map(m => {
+                        const w1Pre = parseFloat(rawData[0][m]) || NaN;
+                        const w1Post = parseFloat(rawData[1][m]) || NaN;
+                        return `
+                            <tr>
+                                <td>${m}</td>
+                                <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
+                                <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
+                            </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+
+        const week2Table = `
+            <table>
+                <thead>
+                    <tr><th colspan="3">${group.name} - Week 2</th></tr>
+                    <tr><th>Metric</th><th>Pre</th><th>Post</th></tr>
+                </thead>
+                <tbody>
+                    ${group.metrics.map(m => {
+                        const w2Pre = parseFloat(rawData[3][m]) || NaN;
+                        const w2Post = parseFloat(rawData[4][m]) || NaN;
+                        return `
+                            <tr>
+                                <td>${m}</td>
+                                <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
+                                <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
+                            </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+
+        tablesContainer.innerHTML = week1Table + week2Table;
+        groupOutput.appendChild(tablesContainer);
+        outputDiv.appendChild(groupOutput);
+
+        // Create chart
         const chartBlock = document.createElement('div');
         chartBlock.className = 'chart-block';
-        chartBlock.innerHTML = `<div class="chart-title">${group.name}</div>`;
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-chart';
+        delBtn.textContent = '✖';
+        delBtn.addEventListener('click', () => chartBlock.remove());
+        chartBlock.appendChild(delBtn);
         const canvas = document.createElement('canvas');
         chartBlock.appendChild(canvas);
         chartsContainer.appendChild(chartBlock);
@@ -334,12 +376,12 @@ function buildTablesCharts(groups) {
         new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: numericMetrics,
+                labels: group.metrics,
                 datasets: [
-                    { label: 'W1 Pre', data: numericMetrics.map(m => parseFloat(rawData[0][m]) || null), backgroundColor: '#ff6384' },
-                    { label: 'W1 Post', data: numericMetrics.map(m => parseFloat(rawData[1][m]) || null), backgroundColor: '#ff3864' },
-                    { label: 'W2 Pre', data: numericMetrics.map(m => parseFloat(rawData[3][m]) || null), backgroundColor: '#36a2eb' },
-                    { label: 'W2 Post', data: numericMetrics.map(m => parseFloat(rawData[4][m]) || null), backgroundColor: '#3677eb' }
+                    { label: 'W1 Pre', data: group.metrics.map(m => parseFloat(rawData[0][m]) || NaN), backgroundColor: '#ff6384' },
+                    { label: 'W1 Post', data: group.metrics.map(m => parseFloat(rawData[1][m]) || NaN), backgroundColor: '#ff3864' },
+                    { label: 'W2 Pre', data: group.metrics.map(m => parseFloat(rawData[3][m]) || NaN), backgroundColor: '#36a2eb' },
+                    { label: 'W2 Post', data: group.metrics.map(m => parseFloat(rawData[4][m]) || NaN), backgroundColor: '#3677eb' }
                 ]
             },
             options: { responsive: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
@@ -349,7 +391,6 @@ function buildTablesCharts(groups) {
     Sortable.create(chartsContainer, { animation: 150 });
 }
 
-// Save config
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
     const configName = prompt('Enter a name for this configuration:');
     if (!configName) return;
@@ -357,7 +398,8 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     const groups = [];
     document.querySelectorAll('#groupsPanel .group').forEach(g => {
         const name = g.querySelector('.group-name').textContent;
-        groups.push({ name });
+        const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
+        if (metrics.length > 0) groups.push({ name, metrics });
     });
 
     let configs = JSON.parse(localStorage.getItem('configs') || '{}');
@@ -367,7 +409,6 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     alert('Configuration saved!');
 });
 
-// Load config
 document.getElementById('loadConfigBtn').addEventListener('click', () => {
     const selected = document.getElementById('configSelect').value;
     if (!selected) {
@@ -379,45 +420,24 @@ document.getElementById('loadConfigBtn').addEventListener('click', () => {
     const config = configs[selected];
     if (!config) return;
 
+    // Clear groups and reset unassigned
     document.getElementById('groupsPanel').innerHTML = `
         <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="margin:0;">Groups</h3>
             <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-        </div>
-    `;
+        </div>`;
+    populateMetrics();
+
     config.forEach(g => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'group';
-        groupDiv.innerHTML = `
-            <div class="group-header">
-                <span class="group-name">${g.name}</span>
-                <button class="delete-group">✖</button>
-            </div>
-            <ul class="metric-list"></ul>
-        `;
-        groupDiv.querySelector('.delete-group').addEventListener('click', () => groupDiv.remove());
-        document.getElementById('groupsPanel').appendChild(groupDiv);
+        addGroup(g.name);
+        const currentGroup = document.querySelectorAll('#groupsPanel .group')[0];
+        g.metrics.forEach(m => {
+            const metricLi = [...document.querySelectorAll('.metrics-item')].find(li => li.textContent === m);
+            if (metricLi) currentGroup.querySelector('.metric-list').appendChild(metricLi);
+        });
     });
 
-    enableDragDrop();
-
-    // Re-bind Add Group
-    document.getElementById('addGroupBtn').addEventListener('click', () => {
-        const name = prompt('Enter group name:');
-        if (!name) return;
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'group';
-        groupDiv.innerHTML = `
-            <div class="group-header">
-                <span class="group-name">${name}</span>
-                <button class="delete-group">✖</button>
-            </div>
-            <ul class="metric-list"></ul>
-        `;
-        groupDiv.querySelector('.delete-group').addEventListener('click', () => groupDiv.remove());
-        document.getElementById('groupsPanel').insertBefore(groupDiv, document.querySelector('.group-header-bar').nextSibling);
-        enableDragDrop();
-    });
+    document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
 });
 
 function updateConfigDropdown() {
@@ -435,7 +455,6 @@ function updateConfigDropdown() {
 // Load configs on page load
 updateConfigDropdown();
 
-// Export PDF
 document.getElementById('exportPDFBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
