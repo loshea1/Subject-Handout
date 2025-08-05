@@ -154,12 +154,11 @@ th { background: #f4f4f4; }
                 <ul id="unassigned" class="metric-list"></ul>
             </div>
             <div class="panel" id="groupsPanel">
-    <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3 style="margin:0;">Groups</h3>
-        <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-    </div>
-</div>
-
+                <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0;">Groups</h3>
+                    <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -178,6 +177,7 @@ th { background: #f4f4f4; }
 <script>
 let rawData = [], headers = [];
 
+// File handling
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('csvFile');
 
@@ -225,9 +225,13 @@ function createMetricItem(name, id) {
     return li;
 }
 
-document.getElementById('addGroupBtn').addEventListener('click', () => {
-    const name = prompt('Enter group name:');
-    if (!name) return;
+// Add group
+function addGroup(name = null) {
+    if (!name) {
+        name = prompt('Enter group name:');
+        if (!name) return;
+    }
+
     const groupDiv = document.createElement('div');
     groupDiv.className = 'group';
     groupDiv.innerHTML = `
@@ -237,19 +241,25 @@ document.getElementById('addGroupBtn').addEventListener('click', () => {
         </div>
         <ul class="metric-list"></ul>
     `;
+
     groupDiv.querySelector('.delete-group').addEventListener('click', () => {
         const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
         metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
         groupDiv.remove();
     });
+
     groupDiv.querySelector('.group-name').addEventListener('dblclick', () => {
         const newName = prompt('Rename group:', name);
         if (newName) groupDiv.querySelector('.group-name').textContent = newName;
     });
-    document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
-    enableDragDrop();
-});
 
+    document.getElementById('groupsPanel').appendChild(groupDiv);
+    enableDragDrop();
+}
+
+document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
+
+// Drag & drop
 function enableDragDrop() {
     document.querySelectorAll('.metrics-item').forEach(item => {
         item.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', item.dataset.id));
@@ -267,6 +277,7 @@ function enableDragDrop() {
     });
 }
 
+// Generate comparison
 document.getElementById('generateBtn').addEventListener('click', () => {
     const groups = [];
     document.querySelectorAll('#groupsPanel .group').forEach(g => {
@@ -278,7 +289,7 @@ document.getElementById('generateBtn').addEventListener('click', () => {
         document.getElementById('legend').style.display = 'block';
         document.getElementById('exportPDFBtn').style.display = 'inline-block';
     }
-    document.getElementById('configSection').style.display = 'none'; // Auto-hide config
+    document.getElementById('configSection').style.display = 'none';
     buildTablesCharts(groups);
 });
 
@@ -334,6 +345,7 @@ function buildTablesCharts(groups) {
     Sortable.create(chartsContainer, { animation: 150 });
 }
 
+// Save configuration
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
     const configName = prompt('Enter a name for this configuration:');
     if (!configName) return;
@@ -352,6 +364,7 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     alert('Configuration saved!');
 });
 
+// Load configuration
 document.getElementById('loadConfigBtn').addEventListener('click', () => {
     const selected = document.getElementById('configSelect').value;
     if (!selected) {
@@ -363,56 +376,25 @@ document.getElementById('loadConfigBtn').addEventListener('click', () => {
     const config = configs[selected];
     if (!config) return;
 
-    // Clear groups
-    document.getElementById('groupsPanel').innerHTML = '<h3>Groups</h3><button id="addGroupBtn" style="margin-bottom:10px;">+ Add Group</button>';
+    // Reset groups panel
+    document.getElementById('groupsPanel').innerHTML = `
+        <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0;">Groups</h3>
+            <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
+        </div>
+    `;
+    document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
     populateMetrics();
 
     config.forEach(g => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'group';
-        groupDiv.innerHTML = `
-            <div class="group-header">
-                <span class="group-name">${g.name}</span>
-                <button class="delete-group">✖</button>
-            </div>
-            <ul class="metric-list"></ul>
-        `;
-
-        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
-            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
-            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
-            groupDiv.remove();
-        });
-
-        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
-
+        addGroup(g.name);
+        const lastGroup = document.querySelector('#groupsPanel .group:last-child');
         g.metrics.forEach(m => {
             const metricLi = [...document.querySelectorAll('.metrics-item')].find(li => li.textContent === m);
-            if (metricLi) groupDiv.querySelector('.metric-list').appendChild(metricLi);
+            if (metricLi) lastGroup.querySelector('.metric-list').appendChild(metricLi);
         });
     });
-
     enableDragDrop();
-    document.getElementById('addGroupBtn').addEventListener('click', () => {
-        const name = prompt('Enter group name:');
-        if (!name) return;
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'group';
-        groupDiv.innerHTML = `
-            <div class="group-header">
-                <span class="group-name">${name}</span>
-                <button class="delete-group">✖</button>
-            </div>
-            <ul class="metric-list"></ul>
-        `;
-        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
-            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
-            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
-            groupDiv.remove();
-        });
-        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
-        enableDragDrop();
-    });
 });
 
 function updateConfigDropdown() {
@@ -426,17 +408,16 @@ function updateConfigDropdown() {
         select.appendChild(option);
     });
 }
-
-// Load configs on page load
 updateConfigDropdown();
 
+// Export as PDF
 document.getElementById('exportPDFBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
     const section = document.getElementById('outputSection');
     const canvas = await html2canvas(section, { scale: 2 });
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 595; // A4 width in pt
+    const imgWidth = 595;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
     pdf.save('comparison.pdf');
