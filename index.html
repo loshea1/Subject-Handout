@@ -91,23 +91,27 @@ select { padding: 6px; }
 .tables-container {
     display: flex;
     gap: 20px;
-    flex-wrap: wrap;
     justify-content: flex-start;
+    margin-bottom: 20px;
+}
+.table-block {
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
 }
 table {
     border-collapse: collapse;
+    font-size: 13px;
     width: 100%;
-    max-width: 500px;
-    font-size: 14px;
-    margin-bottom: 20px;
 }
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 th { background: #f4f4f4; }
+.positive { background-color: #d4edda; color: #155724; }
+.negative { background-color: #f8d7da; color: #721c24; }
 #chartsContainer {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    margin-top: 20px;
     justify-content: flex-start;
 }
 .chart-block {
@@ -164,7 +168,7 @@ th { background: #f4f4f4; }
 </div>
 
 <div id="outputSection">
-    <div id="output"></div>
+    <div class="tables-container" id="tablesContainer"></div>
     <div id="chartsContainer"></div>
     <div class="legend" id="legend">
         <span style="color:#ff6384;">■ Week 1 Pre</span>
@@ -177,7 +181,6 @@ th { background: #f4f4f4; }
 <script>
 let rawData = [], headers = [];
 
-// File handling
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('csvFile');
 
@@ -225,13 +228,9 @@ function createMetricItem(name, id) {
     return li;
 }
 
-// Add group
-function addGroup(name = null) {
-    if (!name) {
-        name = prompt('Enter group name:');
-        if (!name) return;
-    }
-
+document.getElementById('addGroupBtn').addEventListener('click', () => {
+    const name = prompt('Enter group name:');
+    if (!name) return;
     const groupDiv = document.createElement('div');
     groupDiv.className = 'group';
     groupDiv.innerHTML = `
@@ -241,25 +240,20 @@ function addGroup(name = null) {
         </div>
         <ul class="metric-list"></ul>
     `;
-
     groupDiv.querySelector('.delete-group').addEventListener('click', () => {
         const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
         metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
         groupDiv.remove();
     });
-
     groupDiv.querySelector('.group-name').addEventListener('dblclick', () => {
         const newName = prompt('Rename group:', name);
         if (newName) groupDiv.querySelector('.group-name').textContent = newName;
     });
-
-    document.getElementById('groupsPanel').appendChild(groupDiv);
+    const panel = document.getElementById('groupsPanel');
+    panel.insertBefore(groupDiv, panel.children[1]); // Insert at top
     enableDragDrop();
-}
+});
 
-document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
-
-// Drag & drop
 function enableDragDrop() {
     document.querySelectorAll('.metrics-item').forEach(item => {
         item.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', item.dataset.id));
@@ -277,7 +271,6 @@ function enableDragDrop() {
     });
 }
 
-// Generate comparison
 document.getElementById('generateBtn').addEventListener('click', () => {
     const groups = [];
     document.querySelectorAll('#groupsPanel .group').forEach(g => {
@@ -289,38 +282,80 @@ document.getElementById('generateBtn').addEventListener('click', () => {
         document.getElementById('legend').style.display = 'block';
         document.getElementById('exportPDFBtn').style.display = 'inline-block';
     }
-    document.getElementById('configSection').style.display = 'none';
+    document.getElementById('configSection').style.display = 'none'; // Auto-hide config
     buildTablesCharts(groups);
 });
 
 function buildTablesCharts(groups) {
-    const outputDiv = document.getElementById('output');
+    const tablesContainer = document.getElementById('tablesContainer');
     const chartsContainer = document.getElementById('chartsContainer');
-    outputDiv.innerHTML = '';
+    tablesContainer.innerHTML = '';
     chartsContainer.innerHTML = '';
 
-    groups.forEach(group => {
-        const tableHTML = `
-            <h3>${group.name}</h3>
-            <table>
-                <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
-                ${group.metrics.map(m => {
-                    const w1Pre = parseFloat(rawData[0][m]) || NaN;
-                    const w1Post = parseFloat(rawData[1][m]) || NaN;
-                    const w2Pre = parseFloat(rawData[3][m]) || NaN;
-                    const w2Post = parseFloat(rawData[4][m]) || NaN;
-                    return `
-                        <tr>
-                            <td>${m}</td>
-                            <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
-                            <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
-                            <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
-                            <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
-                        </tr>`;
-                }).join('')}
-            </table>`;
-        outputDiv.innerHTML += tableHTML;
+    // Create Week 1 and Week 2 tables side by side
+    const week1Table = document.createElement('div');
+    week1Table.className = 'table-block';
+    week1Table.innerHTML = `<h3>Week 1</h3><table>
+        <tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>
+    </table>`;
+    const week1Body = week1Table.querySelector('table');
 
+    const week2Table = document.createElement('div');
+    week2Table.className = 'table-block';
+    week2Table.innerHTML = `<h3>Week 2</h3><table>
+        <tr><th>Assessment</th><th>Metric</th><th>Pre</th><th>Post</th><th>Follow-up</th><th>% Change (Pre→Post)</th></tr>
+    </table>`;
+    const week2Body = week2Table.querySelector('table');
+
+    groups.forEach(group => {
+        // Add rows for Week 1
+        const rowCount = group.metrics.length;
+        group.metrics.forEach((m, idx) => {
+            const w1Pre = parseFloat(rawData[0][m]) || NaN;
+            const w1Post = parseFloat(rawData[1][m]) || NaN;
+            const w1Follow = parseFloat(rawData[2]?.[m]) || NaN;
+            const change = (isNaN(w1Pre) || isNaN(w1Post)) ? '-' : (((w1Post - w1Pre) / w1Pre) * 100).toFixed(2);
+            const changeClass = (change !== '-' && parseFloat(change) > 0) ? 'positive' : (change !== '-' ? 'negative' : '');
+
+            const tr = document.createElement('tr');
+            if (idx === 0) {
+                const td = document.createElement('td');
+                td.rowSpan = rowCount;
+                td.textContent = group.name;
+                tr.appendChild(td);
+            }
+            tr.innerHTML += `<td>${m}</td>
+                             <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
+                             <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
+                             <td>${isNaN(w1Follow)?'-':w1Follow.toFixed(2)}</td>
+                             <td class="${changeClass}">${change === '-' ? '-' : change + '%'}</td>`;
+            week1Body.appendChild(tr);
+        });
+
+        // Add rows for Week 2
+        group.metrics.forEach((m, idx) => {
+            const w2Pre = parseFloat(rawData[3][m]) || NaN;
+            const w2Post = parseFloat(rawData[4][m]) || NaN;
+            const w2Follow = parseFloat(rawData[5]?.[m]) || NaN;
+            const change = (isNaN(w2Pre) || isNaN(w2Post)) ? '-' : (((w2Post - w2Pre) / w2Pre) * 100).toFixed(2);
+            const changeClass = (change !== '-' && parseFloat(change) > 0) ? 'positive' : (change !== '-' ? 'negative' : '');
+
+            const tr = document.createElement('tr');
+            if (idx === 0) {
+                const td = document.createElement('td');
+                td.rowSpan = rowCount;
+                td.textContent = group.name;
+                tr.appendChild(td);
+            }
+            tr.innerHTML += `<td>${m}</td>
+                             <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
+                             <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
+                             <td>${isNaN(w2Follow)?'-':w2Follow.toFixed(2)}</td>
+                             <td class="${changeClass}">${change === '-' ? '-' : change + '%'}</td>`;
+            week2Body.appendChild(tr);
+        });
+
+        // Add chart for each group
         const chartBlock = document.createElement('div');
         chartBlock.className = 'chart-block';
         const canvas = document.createElement('canvas');
@@ -338,86 +373,22 @@ function buildTablesCharts(groups) {
                     { label: 'W2 Post', data: group.metrics.map(m => parseFloat(rawData[4][m]) || NaN), backgroundColor: '#3677eb' }
                 ]
             },
-            options: { responsive: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            options: { responsive: false, plugins: { legend: { display: false }, title: { display: true, text: group.name } }, scales: { y: { beginAtZero: true } } }
         });
     });
 
+    tablesContainer.appendChild(week1Table);
+    tablesContainer.appendChild(week2Table);
     Sortable.create(chartsContainer, { animation: 150 });
 }
 
-// Save configuration
-document.getElementById('saveConfigBtn').addEventListener('click', () => {
-    const configName = prompt('Enter a name for this configuration:');
-    if (!configName) return;
-
-    const groups = [];
-    document.querySelectorAll('#groupsPanel .group').forEach(g => {
-        const name = g.querySelector('.group-name').textContent;
-        const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
-        if (metrics.length > 0) groups.push({ name, metrics });
-    });
-
-    let configs = JSON.parse(localStorage.getItem('configs') || '{}');
-    configs[configName] = groups;
-    localStorage.setItem('configs', JSON.stringify(configs));
-    updateConfigDropdown();
-    alert('Configuration saved!');
-});
-
-// Load configuration
-document.getElementById('loadConfigBtn').addEventListener('click', () => {
-    const selected = document.getElementById('configSelect').value;
-    if (!selected) {
-        alert('Please select a configuration to load.');
-        return;
-    }
-
-    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
-    const config = configs[selected];
-    if (!config) return;
-
-    // Reset groups panel
-    document.getElementById('groupsPanel').innerHTML = `
-        <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="margin:0;">Groups</h3>
-            <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-        </div>
-    `;
-    document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
-    populateMetrics();
-
-    config.forEach(g => {
-        addGroup(g.name);
-        const lastGroup = document.querySelector('#groupsPanel .group:last-child');
-        g.metrics.forEach(m => {
-            const metricLi = [...document.querySelectorAll('.metrics-item')].find(li => li.textContent === m);
-            if (metricLi) lastGroup.querySelector('.metric-list').appendChild(metricLi);
-        });
-    });
-    enableDragDrop();
-});
-
-function updateConfigDropdown() {
-    const configs = JSON.parse(localStorage.getItem('configs') || '{}');
-    const select = document.getElementById('configSelect');
-    select.innerHTML = '<option value="">Select Configuration</option>';
-    Object.keys(configs).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    });
-}
-updateConfigDropdown();
-
-// Export as PDF
 document.getElementById('exportPDFBtn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
     const section = document.getElementById('outputSection');
     const canvas = await html2canvas(section, { scale: 2 });
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 595;
+    const imgWidth = 595; // A4 width in pt
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
     pdf.save('comparison.pdf');
