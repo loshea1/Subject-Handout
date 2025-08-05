@@ -70,8 +70,27 @@ th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 th { background: #f4f4f4; }
 #chartsContainer { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center; }
 #chartsContainer canvas { background: #fff; padding: 5px; border-radius: 6px; width: 350px !important; height: 250px !important; }
-.legend { text-align: center; margin-top: 10px; }
+.legend { text-align: center; margin-top: 10px; display: none; }
 .legend span { margin: 0 10px; }
+#addGroupBtn {
+    width: 100%;
+    margin-top: 10px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+#generateBtn {
+    margin-top: 20px;
+    padding: 10px 15px;
+    background: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -87,15 +106,15 @@ th { background: #f4f4f4; }
     </div>
     <div class="panel" id="groupsPanel">
         <h3>Groups</h3>
+        <button id="addGroupBtn">+ Add Group</button>
     </div>
 </div>
-<button id="addGroupBtn" style="margin-top:10px;">Add Group</button>
-<br><br>
+
 <button id="generateBtn">Generate Comparison</button>
 
 <div id="output"></div>
 <div id="chartsContainer"></div>
-<div class="legend">
+<div class="legend" id="legend">
     <span style="color:#ff6384;">■ Week 1 Pre</span>
     <span style="color:#ff3864;">■ Week 1 Post</span>
     <span style="color:#36a2eb;">■ Week 2 Pre</span>
@@ -159,8 +178,13 @@ document.getElementById('addGroupBtn').addEventListener('click', () => {
         </div>
         <ul class="metric-list"></ul>
     `;
-    groupDiv.querySelector('.delete-group').addEventListener('click', () => groupDiv.remove());
-    document.getElementById('groupsPanel').appendChild(groupDiv);
+    const deleteBtn = groupDiv.querySelector('.delete-group');
+    deleteBtn.addEventListener('click', () => {
+        const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+        metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+        groupDiv.remove();
+    });
+    document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
     enableDragDrop();
 });
 
@@ -189,6 +213,7 @@ document.getElementById('generateBtn').addEventListener('click', () => {
         const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
         if (metrics.length > 0) groups.push({ name, metrics });
     });
+    if (groups.length > 0) document.getElementById('legend').style.display = 'block';
     buildTablesCharts(groups);
 });
 
