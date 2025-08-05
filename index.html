@@ -30,10 +30,10 @@ h2 { margin-bottom: 10px; }
     background: #fafafa;
     min-height: 300px;
 }
-.metric-list, .group .metric-list {
+.metric-list {
     list-style: none;
     padding: 0;
-    min-height: 100px;
+    min-height: 50px;
 }
 .metrics-item {
     background: #fff;
@@ -52,7 +52,11 @@ h2 { margin-bottom: 10px; }
 .group-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 5px;
+}
+.group-header span {
+    cursor: pointer;
 }
 .delete-group {
     background: #ff4d4d;
@@ -69,6 +73,24 @@ table { border-collapse: collapse; width: 100%; max-width: 600px; font-size: 14p
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 th { background: #f4f4f4; }
 #chartsContainer { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center; }
+.chart-block {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    background: #fff;
+    position: relative;
+}
+.delete-chart {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ff4d4d;
+    color: #fff;
+    border: none;
+    padding: 3px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+}
 #chartsContainer canvas { background: #fff; padding: 5px; border-radius: 6px; width: 350px !important; height: 250px !important; }
 .legend { text-align: center; margin-top: 10px; display: none; }
 .legend span { margin: 0 10px; }
@@ -82,14 +104,17 @@ th { background: #f4f4f4; }
     cursor: pointer;
     border-radius: 4px;
 }
-#generateBtn {
-    margin-top: 20px;
-    padding: 10px 15px;
+#generateBtn, #saveConfigBtn, #loadConfigBtn {
+    margin-top: 10px;
+    padding: 8px 12px;
     background: #28a745;
     color: #fff;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+}
+#saveConfigBtn, #loadConfigBtn {
+    background: #6c757d;
 }
 </style>
 </head>
@@ -110,7 +135,11 @@ th { background: #f4f4f4; }
     </div>
 </div>
 
-<button id="generateBtn">Generate Comparison</button>
+<div style="margin-top:15px;">
+    <button id="generateBtn">Generate Comparison</button>
+    <button id="saveConfigBtn">Save Configuration</button>
+    <button id="loadConfigBtn">Load Configuration</button>
+</div>
 
 <div id="output"></div>
 <div id="chartsContainer"></div>
@@ -152,18 +181,23 @@ function populateMetrics() {
     const ul = document.getElementById('unassigned');
     ul.innerHTML = '';
     headers.slice(1).forEach((h, i) => {
-        const li = document.createElement('li');
-        li.textContent = h;
-        li.className = 'metrics-item';
-        li.setAttribute('draggable', 'true');
-        li.dataset.id = i;
-        li.addEventListener('dblclick', () => {
-            const newName = prompt('Rename metric:', li.textContent);
-            if (newName) li.textContent = newName;
-        });
+        const li = createMetricItem(h, i);
         ul.appendChild(li);
     });
     enableDragDrop();
+}
+
+function createMetricItem(name, id) {
+    const li = document.createElement('li');
+    li.textContent = name;
+    li.className = 'metrics-item';
+    li.setAttribute('draggable', 'true');
+    li.dataset.id = id;
+    li.addEventListener('dblclick', () => {
+        const newName = prompt('Rename metric:', li.textContent);
+        if (newName) li.textContent = newName;
+    });
+    return li;
 }
 
 document.getElementById('addGroupBtn').addEventListener('click', () => {
@@ -183,6 +217,11 @@ document.getElementById('addGroupBtn').addEventListener('click', () => {
         const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
         metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
         groupDiv.remove();
+    });
+    const nameSpan = groupDiv.querySelector('.group-name');
+    nameSpan.addEventListener('dblclick', () => {
+        const newName = prompt('Rename group:', nameSpan.textContent);
+        if (newName) nameSpan.textContent = newName;
     });
     document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
     enableDragDrop();
@@ -229,7 +268,6 @@ function buildTablesCharts(groups) {
             <table>
                 <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
                 ${group.metrics.map(m => {
-                    const col = headers.indexOf(m);
                     const w1Pre = parseFloat(rawData[0][m]) || NaN;
                     const w1Post = parseFloat(rawData[1][m]) || NaN;
                     const w2Pre = parseFloat(rawData[3][m]) || NaN;
@@ -252,8 +290,17 @@ function buildTablesCharts(groups) {
         const w2PreVals = group.metrics.map(m => parseFloat(rawData[3][m]) || NaN);
         const w2PostVals = group.metrics.map(m => parseFloat(rawData[4][m]) || NaN);
 
+        const chartBlock = document.createElement('div');
+        chartBlock.className = 'chart-block';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-chart';
+        deleteBtn.textContent = '✖';
+        deleteBtn.addEventListener('click', () => chartBlock.remove());
+        chartBlock.appendChild(deleteBtn);
+
         const canvas = document.createElement('canvas');
-        chartsContainer.appendChild(canvas);
+        chartBlock.appendChild(canvas);
+        chartsContainer.appendChild(chartBlock);
 
         new Chart(canvas, {
             type: 'bar',
@@ -270,6 +317,54 @@ function buildTablesCharts(groups) {
         });
     });
 }
+
+// Save configuration
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+    const config = [];
+    document.querySelectorAll('#groupsPanel .group').forEach(g => {
+        const name = g.querySelector('.group-name').textContent;
+        const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
+        config.push({ name, metrics });
+    });
+    localStorage.setItem('weekCompareConfig', JSON.stringify(config));
+    alert('Configuration saved!');
+});
+
+// Load configuration
+document.getElementById('loadConfigBtn').addEventListener('click', () => {
+    const config = JSON.parse(localStorage.getItem('weekCompareConfig') || '[]');
+    if (config.length === 0) return alert('No configuration found!');
+    document.querySelectorAll('#groupsPanel .group').forEach(g => g.remove());
+    config.forEach(c => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${c.name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+        const deleteBtn = groupDiv.querySelector('.delete-group');
+        deleteBtn.addEventListener('click', () => {
+            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+            groupDiv.remove();
+        });
+        const nameSpan = groupDiv.querySelector('.group-name');
+        nameSpan.addEventListener('dblclick', () => {
+            const newName = prompt('Rename group:', nameSpan.textContent);
+            if (newName) nameSpan.textContent = newName;
+        });
+        const ul = groupDiv.querySelector('.metric-list');
+        c.metrics.forEach(m => {
+            const li = createMetricItem(m, Date.now());
+            ul.appendChild(li);
+        });
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
+    });
+    enableDragDrop();
+});
 </script>
 </body>
 </html>
