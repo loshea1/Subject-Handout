@@ -88,21 +88,18 @@ select { padding: 6px; }
     padding: 20px;
     border-radius: 8px;
 }
-.group-output {
-    margin-bottom: 25px;
-}
 .tables-container {
     display: flex;
     gap: 20px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: flex-start;
-    margin-bottom: 15px;
 }
 table {
     border-collapse: collapse;
     width: 100%;
-    max-width: 350px;
+    max-width: 500px;
     font-size: 14px;
+    margin-bottom: 20px;
 }
 th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
 th { background: #f4f4f4; }
@@ -120,22 +117,6 @@ th { background: #f4f4f4; }
     background: #fff;
     width: 370px;
     cursor: grab;
-    position: relative;
-}
-.delete-chart {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: #ff4d4d;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    font-size: 14px;
-    line-height: 20px;
-    text-align: center;
-    cursor: pointer;
 }
 #chartsContainer canvas {
     width: 350px !important;
@@ -173,10 +154,8 @@ th { background: #f4f4f4; }
                 <ul id="unassigned" class="metric-list"></ul>
             </div>
             <div class="panel" id="groupsPanel">
-                <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="margin:0;">Groups</h3>
-                    <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-                </div>
+                <h3>Groups</h3>
+                <button id="addGroupBtn" style="margin-bottom:10px;">+ Add Group</button>
             </div>
         </div>
     </div>
@@ -243,16 +222,14 @@ function createMetricItem(name, id) {
     return li;
 }
 
-document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
-
-function addGroup(name = '') {
-    const groupName = name || prompt('Enter group name:');
-    if (!groupName) return;
+document.getElementById('addGroupBtn').addEventListener('click', () => {
+    const name = prompt('Enter group name:');
+    if (!name) return;
     const groupDiv = document.createElement('div');
     groupDiv.className = 'group';
     groupDiv.innerHTML = `
         <div class="group-header">
-            <span class="group-name">${groupName}</span>
+            <span class="group-name">${name}</span>
             <button class="delete-group">✖</button>
         </div>
         <ul class="metric-list"></ul>
@@ -263,12 +240,12 @@ function addGroup(name = '') {
         groupDiv.remove();
     });
     groupDiv.querySelector('.group-name').addEventListener('dblclick', () => {
-        const newName = prompt('Rename group:', groupName);
+        const newName = prompt('Rename group:', name);
         if (newName) groupDiv.querySelector('.group-name').textContent = newName;
     });
-    document.getElementById('groupsPanel').insertBefore(groupDiv, document.querySelector('.group-header-bar').nextSibling);
+    document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
     enableDragDrop();
-}
+});
 
 function enableDragDrop() {
     document.querySelectorAll('.metrics-item').forEach(item => {
@@ -309,66 +286,29 @@ function buildTablesCharts(groups) {
     chartsContainer.innerHTML = '';
 
     groups.forEach(group => {
-        // Create tables
-        const groupOutput = document.createElement('div');
-        groupOutput.className = 'group-output';
-        const tablesContainer = document.createElement('div');
-        tablesContainer.className = 'tables-container';
-
-        const week1Table = `
+        const tableHTML = `
+            <h3>${group.name}</h3>
             <table>
-                <thead>
-                    <tr><th colspan="3">${group.name} - Week 1</th></tr>
-                    <tr><th>Metric</th><th>Pre</th><th>Post</th></tr>
-                </thead>
-                <tbody>
-                    ${group.metrics.map(m => {
-                        const w1Pre = parseFloat(rawData[0][m]) || NaN;
-                        const w1Post = parseFloat(rawData[1][m]) || NaN;
-                        return `
-                            <tr>
-                                <td>${m}</td>
-                                <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
-                                <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
-                            </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
+                <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
+                ${group.metrics.map(m => {
+                    const w1Pre = parseFloat(rawData[0][m]) || NaN;
+                    const w1Post = parseFloat(rawData[1][m]) || NaN;
+                    const w2Pre = parseFloat(rawData[3][m]) || NaN;
+                    const w2Post = parseFloat(rawData[4][m]) || NaN;
+                    return `
+                        <tr>
+                            <td>${m}</td>
+                            <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
+                            <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
+                            <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
+                            <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
+                        </tr>`;
+                }).join('')}
+            </table>`;
+        outputDiv.innerHTML += tableHTML;
 
-        const week2Table = `
-            <table>
-                <thead>
-                    <tr><th colspan="3">${group.name} - Week 2</th></tr>
-                    <tr><th>Metric</th><th>Pre</th><th>Post</th></tr>
-                </thead>
-                <tbody>
-                    ${group.metrics.map(m => {
-                        const w2Pre = parseFloat(rawData[3][m]) || NaN;
-                        const w2Post = parseFloat(rawData[4][m]) || NaN;
-                        return `
-                            <tr>
-                                <td>${m}</td>
-                                <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
-                                <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
-                            </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
-
-        tablesContainer.innerHTML = week1Table + week2Table;
-        groupOutput.appendChild(tablesContainer);
-        outputDiv.appendChild(groupOutput);
-
-        // Create chart
         const chartBlock = document.createElement('div');
         chartBlock.className = 'chart-block';
-        const delBtn = document.createElement('button');
-        delBtn.className = 'delete-chart';
-        delBtn.textContent = '✖';
-        delBtn.addEventListener('click', () => chartBlock.remove());
-        chartBlock.appendChild(delBtn);
         const canvas = document.createElement('canvas');
         chartBlock.appendChild(canvas);
         chartsContainer.appendChild(chartBlock);
@@ -420,24 +360,56 @@ document.getElementById('loadConfigBtn').addEventListener('click', () => {
     const config = configs[selected];
     if (!config) return;
 
-    // Clear groups and reset unassigned
-    document.getElementById('groupsPanel').innerHTML = `
-        <div class="group-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="margin:0;">Groups</h3>
-            <button id="addGroupBtn" style="padding:6px 10px; background:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;">+</button>
-        </div>`;
+    // Clear groups
+    document.getElementById('groupsPanel').innerHTML = '<h3>Groups</h3><button id="addGroupBtn" style="margin-bottom:10px;">+ Add Group</button>';
     populateMetrics();
 
     config.forEach(g => {
-        addGroup(g.name);
-        const currentGroup = document.querySelectorAll('#groupsPanel .group')[0];
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${g.name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
+            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+            groupDiv.remove();
+        });
+
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
+
         g.metrics.forEach(m => {
             const metricLi = [...document.querySelectorAll('.metrics-item')].find(li => li.textContent === m);
-            if (metricLi) currentGroup.querySelector('.metric-list').appendChild(metricLi);
+            if (metricLi) groupDiv.querySelector('.metric-list').appendChild(metricLi);
         });
     });
 
-    document.getElementById('addGroupBtn').addEventListener('click', () => addGroup());
+    enableDragDrop();
+    document.getElementById('addGroupBtn').addEventListener('click', () => {
+        const name = prompt('Enter group name:');
+        if (!name) return;
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `
+            <div class="group-header">
+                <span class="group-name">${name}</span>
+                <button class="delete-group">✖</button>
+            </div>
+            <ul class="metric-list"></ul>
+        `;
+        groupDiv.querySelector('.delete-group').addEventListener('click', () => {
+            const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
+            metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
+            groupDiv.remove();
+        });
+        document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
+        enableDragDrop();
+    });
 });
 
 function updateConfigDropdown() {
