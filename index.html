@@ -1,275 +1,317 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Custom Week Comparison</title>
-
-<!-- Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-h2 { margin-bottom: 10px; }
-#dropZone {
-    border: 2px dashed #999;
-    padding: 20px;
-    text-align: center;
-    background: #f9f9f9;
-    margin-bottom: 20px;
-    cursor: pointer;
-}
-.flex-container { display: flex; gap: 20px; margin-top: 20px; }
-.panel {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background: #fafafa;
-    min-height: 300px;
-}
-.metric-list, .group .metric-list {
-    list-style: none;
-    padding: 0;
-    min-height: 100px;
-}
-.metrics-item {
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 6px;
-    margin-bottom: 5px;
-    cursor: grab;
-}
-.group {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    background: #fff;
-}
-.group-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-}
-.delete-group {
-    background: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 3px 8px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-.drag-over { background: #e6f7ff; }
-#output { margin-top: 20px; }
-.tables-container { display: flex; gap: 20px; flex-wrap: wrap; }
-table { border-collapse: collapse; width: 100%; max-width: 600px; font-size: 14px; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-th { background: #f4f4f4; }
-#chartsContainer { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center; }
-#chartsContainer canvas { background: #fff; padding: 5px; border-radius: 6px; width: 350px !important; height: 250px !important; }
-.legend { text-align: center; margin-top: 10px; display: none; }
-.legend span { margin: 0 10px; }
-#addGroupBtn {
-    width: 100%;
-    margin-top: 10px;
-    background: #007bff;
-    color: #fff;
-    border: none;
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-#generateBtn {
-    margin-top: 20px;
-    padding: 10px 15px;
-    background: #28a745;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare Weeks</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #drop-zone {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      margin: 20px;
+      width: 90%;
+      text-align: center;
+    }
+    #controls {
+      display: flex;
+      justify-content: space-between;
+      width: 90%;
+      margin: 10px 0;
+    }
+    #metric-list, #group-list {
+      display: inline-block;
+      vertical-align: top;
+      width: 45%;
+      border: 1px solid #ccc;
+      min-height: 200px;
+      padding: 10px;
+    }
+    .group {
+      margin: 10px 0;
+      border: 1px solid #aaa;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      background-color: #e0e0e0;
+      padding: 5px;
+    }
+    .metric-item {
+      margin: 5px;
+      padding: 5px;
+      background-color: #eaeaea;
+      cursor: move;
+    }
+    #graphs-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+      width: 100%;
+    }
+    .graph-box {
+      margin: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      width: 90%;
+    }
+    .tables-container {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    table {
+      margin: 10px;
+      border-collapse: collapse;
+      width: 45%;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 5px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
+  <h1>Week Comparison Tool</h1>
+  <div id="drop-zone">Drag and drop your CSV file here</div>
 
-<h2>Upload CSV File</h2>
-<div id="dropZone">Drag & Drop CSV Here or Click to Upload</div>
-<input type="file" id="csvFile" accept=".csv" style="display:none;" />
+  <div id="controls">
+    <button onclick="generateComparison()">Generate Comparison</button>
+    <button onclick="saveConfiguration()">Save Configuration</button>
+    <button onclick="loadConfiguration()">Load Configuration</button>
+  </div>
 
-<div class="flex-container">
-    <div class="panel">
-        <h3>Available Metrics</h3>
-        <ul id="unassigned" class="metric-list"></ul>
+  <div id="configuration">
+    <div id="metric-list"></div>
+    <div id="group-list">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label><strong>Groups</strong></label>
+        <button onclick="addGroup()">+ Add Group</button>
+      </div>
+      <div id="groups"></div>
     </div>
-    <div class="panel" id="groupsPanel">
-        <h3>Groups</h3>
-        <button id="addGroupBtn">+ Add Group</button>
-    </div>
-</div>
+  </div>
 
-<button id="generateBtn">Generate Comparison</button>
+  <div id="graphs-container"></div>
+  <div class="tables-container">
+    <div id="week1-table"></div>
+    <div id="week2-table"></div>
+  </div>
+  <button id="export-pdf" style="display:none;" onclick="exportToPDF()">Save PDF</button>
 
-<div id="output"></div>
-<div id="chartsContainer"></div>
-<div class="legend" id="legend">
-    <span style="color:#ff6384;">■ Week 1 Pre</span>
-    <span style="color:#ff3864;">■ Week 1 Post</span>
-    <span style="color:#36a2eb;">■ Week 2 Pre</span>
-    <span style="color:#3677eb;">■ Week 2 Post</span>
-</div>
+  <script>
+    let csvData;
+    let config = { groups: [] };
 
-<script>
-let rawData = [], headers = [];
-
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('csvFile');
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background="#eef"; });
-dropZone.addEventListener('dragleave', () => dropZone.style.background="#f9f9f9");
-dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.style.background="#f9f9f9";
-    handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-
-function handleFile(file) {
-    Papa.parse(file, {
+    document.getElementById('drop-zone').addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    document.getElementById('drop-zone').addEventListener('drop', e => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      Papa.parse(file, {
         header: true,
-        complete: function(results) {
-            headers = results.meta.fields;
-            rawData = results.data.filter(r => r[headers[0]]);
-            populateMetrics();
+        skipEmptyLines: true,
+        complete: results => {
+          csvData = results.data;
+          populateMetricList();
         }
+      });
     });
-}
 
-function populateMetrics() {
-    const ul = document.getElementById('unassigned');
-    ul.innerHTML = '';
-    headers.slice(1).forEach((h, i) => {
-        const li = document.createElement('li');
-        li.textContent = h;
-        li.className = 'metrics-item';
-        li.setAttribute('draggable', 'true');
-        li.dataset.id = i;
-        li.addEventListener('dblclick', () => {
-            const newName = prompt('Rename metric:', li.textContent);
-            if (newName) li.textContent = newName;
+    function populateMetricList() {
+      const metricList = document.getElementById('metric-list');
+      metricList.innerHTML = '';
+      const keys = Object.keys(csvData[0]);
+      keys.forEach(key => {
+        const div = document.createElement('div');
+        div.className = 'metric-item';
+        div.draggable = true;
+        div.textContent = key;
+        div.ondragstart = e => {
+          e.dataTransfer.setData('text/plain', key);
+        };
+        metricList.appendChild(div);
+      });
+    }
+
+    function addGroup() {
+      const groupName = prompt("Enter group name:");
+      if (!groupName) return;
+      const groupId = Date.now();
+      const group = { id: groupId, name: groupName, metrics: [] };
+      config.groups.unshift(group);
+      renderGroups();
+    }
+
+    function renderGroups() {
+      const groupsDiv = document.getElementById('groups');
+      groupsDiv.innerHTML = '';
+      config.groups.forEach(group => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.ondragover = e => e.preventDefault();
+        groupDiv.ondrop = e => {
+          const metric = e.dataTransfer.getData('text/plain');
+          if (!group.metrics.includes(metric)) group.metrics.push(metric);
+          renderGroups();
+        };
+
+        const header = document.createElement('div');
+        header.className = 'group-header';
+        header.innerHTML = `
+          <span>${group.name}</span>
+          <button onclick="deleteGroup(${group.id})">Delete</button>
+        `;
+        groupDiv.appendChild(header);
+
+        group.metrics.forEach(m => {
+          const div = document.createElement('div');
+          div.className = 'metric-item';
+          div.textContent = m;
+          groupDiv.appendChild(div);
         });
-        ul.appendChild(li);
-    });
-    enableDragDrop();
-}
 
-document.getElementById('addGroupBtn').addEventListener('click', () => {
-    const name = prompt('Enter group name:');
-    if (!name) return;
-    const groupDiv = document.createElement('div');
-    groupDiv.className = 'group';
-    groupDiv.innerHTML = `
-        <div class="group-header">
-            <span class="group-name">${name}</span>
-            <button class="delete-group">✖</button>
-        </div>
-        <ul class="metric-list"></ul>
-    `;
-    const deleteBtn = groupDiv.querySelector('.delete-group');
-    deleteBtn.addEventListener('click', () => {
-        const metricsToReturn = groupDiv.querySelectorAll('.metrics-item');
-        metricsToReturn.forEach(item => document.getElementById('unassigned').appendChild(item));
-        groupDiv.remove();
-    });
-    document.getElementById('groupsPanel').insertBefore(groupDiv, document.getElementById('addGroupBtn'));
-    enableDragDrop();
-});
+        groupsDiv.appendChild(groupDiv);
+      });
+    }
 
-function enableDragDrop() {
-    document.querySelectorAll('.metrics-item').forEach(item => {
-        item.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', item.dataset.id));
-    });
+    function deleteGroup(id) {
+      config.groups = config.groups.filter(g => g.id !== id);
+      renderGroups();
+    }
 
-    document.querySelectorAll('.metric-list').forEach(list => {
-        list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
-        list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
-        list.addEventListener('drop', e => {
-            e.preventDefault();
-            const id = e.dataTransfer.getData('text/plain');
-            const dragged = document.querySelector(`.metrics-item[data-id="${id}"]`);
-            if (dragged) list.appendChild(dragged);
-            list.classList.remove('drag-over');
-        });
-    });
-}
+    function generateComparison() {
+      document.getElementById('export-pdf').style.display = 'block';
+      document.getElementById('configuration').style.display = 'none';
+      const week1 = [], week2 = [];
+      const dates = [...new Set(csvData.map(row => row['date of assessment']))].sort();
+      const mid = Math.floor(dates.length / 2);
+      const week1Dates = new Set(dates.slice(0, mid));
+      const week2Dates = new Set(dates.slice(mid));
+      csvData.forEach(row => {
+        if (week1Dates.has(row['date of assessment'])) week1.push(row);
+        else week2.push(row);
+      });
 
-document.getElementById('generateBtn').addEventListener('click', () => {
-    const groups = [];
-    document.querySelectorAll('#groupsPanel .group').forEach(g => {
-        const name = g.querySelector('.group-name').textContent;
-        const metrics = Array.from(g.querySelectorAll('.metrics-item')).map(li => li.textContent);
-        if (metrics.length > 0) groups.push({ name, metrics });
-    });
-    if (groups.length > 0) document.getElementById('legend').style.display = 'block';
-    buildTablesCharts(groups);
-});
+      generateTables(week1, 'week1-table');
+      generateTables(week2, 'week2-table');
 
-function buildTablesCharts(groups) {
-    const outputDiv = document.getElementById('output');
-    const chartsContainer = document.getElementById('chartsContainer');
-    outputDiv.innerHTML = '';
-    chartsContainer.innerHTML = '';
-
-    groups.forEach(group => {
-        const tableHTML = `
-            <h3>${group.name}</h3>
-            <table>
-                <tr><th>Metric</th><th>W1 Pre</th><th>W1 Post</th><th>W2 Pre</th><th>W2 Post</th></tr>
-                ${group.metrics.map(m => {
-                    const col = headers.indexOf(m);
-                    const w1Pre = parseFloat(rawData[0][m]) || NaN;
-                    const w1Post = parseFloat(rawData[1][m]) || NaN;
-                    const w2Pre = parseFloat(rawData[3][m]) || NaN;
-                    const w2Post = parseFloat(rawData[4][m]) || NaN;
-                    return `
-                        <tr>
-                            <td>${m}</td>
-                            <td>${isNaN(w1Pre)?'-':w1Pre.toFixed(2)}</td>
-                            <td>${isNaN(w1Post)?'-':w1Post.toFixed(2)}</td>
-                            <td>${isNaN(w2Pre)?'-':w2Pre.toFixed(2)}</td>
-                            <td>${isNaN(w2Post)?'-':w2Post.toFixed(2)}</td>
-                        </tr>`;
-                }).join('')}
-            </table>`;
-        outputDiv.innerHTML += tableHTML;
+      const graphsContainer = document.getElementById('graphs-container');
+      graphsContainer.innerHTML = '';
+      config.groups.forEach(group => {
+        const div = document.createElement('div');
+        div.className = 'graph-box';
+        const canvas = document.createElement('canvas');
+        div.innerHTML = `<h3>${group.name}</h3>`;
+        div.appendChild(canvas);
+        graphsContainer.appendChild(div);
 
         const labels = group.metrics;
-        const w1PreVals = group.metrics.map(m => parseFloat(rawData[0][m]) || NaN);
-        const w1PostVals = group.metrics.map(m => parseFloat(rawData[1][m]) || NaN);
-        const w2PreVals = group.metrics.map(m => parseFloat(rawData[3][m]) || NaN);
-        const w2PostVals = group.metrics.map(m => parseFloat(rawData[4][m]) || NaN);
-
-        const canvas = document.createElement('canvas');
-        chartsContainer.appendChild(canvas);
+        const data1 = labels.map(label => average(week1.map(r => parseFloat(r[label]))));
+        const data2 = labels.map(label => average(week2.map(r => parseFloat(r[label]))));
 
         new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    { label: 'W1 Pre', data: w1PreVals, backgroundColor: '#ff6384' },
-                    { label: 'W1 Post', data: w1PostVals, backgroundColor: '#ff3864' },
-                    { label: 'W2 Pre', data: w2PreVals, backgroundColor: '#36a2eb' },
-                    { label: 'W2 Post', data: w2PostVals, backgroundColor: '#3677eb' }
-                ]
-            },
-            options: { responsive: false, scales: { y: { beginAtZero: true } } }
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Week 1', data: data1, backgroundColor: 'blue' },
+              { label: 'Week 2', data: data2, backgroundColor: 'orange' }
+            ]
+          },
+          options: {
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true } }
+          }
         });
-    });
-}
-</script>
+      });
+    }
+
+    function average(arr) {
+      const valid = arr.filter(v => !isNaN(v));
+      return valid.length ? (valid.reduce((a,b) => a + b, 0) / valid.length).toFixed(2) : '';
+    }
+
+    function generateTables(data, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      config.groups.forEach(group => {
+        const table = document.createElement('table');
+        const titleRow = document.createElement('tr');
+        const titleCell = document.createElement('th');
+        titleCell.colSpan = group.metrics.length + 1;
+        titleCell.textContent = group.name;
+        titleRow.appendChild(titleCell);
+        table.appendChild(titleRow);
+
+        const header = document.createElement('tr');
+        header.innerHTML = '<th>Date</th>' + group.metrics.map(m => `<th>${m}</th>`).join('');
+        table.appendChild(header);
+
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row['date of assessment']}</td>` + group.metrics.map(m => `<td>${parseFloat(row[m] || '').toFixed(2) || ''}</td>`).join('');
+          table.appendChild(tr);
+        });
+
+        container.appendChild(table);
+      });
+    }
+
+    function saveConfiguration() {
+      const name = prompt("Enter configuration name:");
+      if (!name) return;
+      localStorage.setItem(name, JSON.stringify(config));
+      alert("Configuration saved.");
+    }
+
+    function loadConfiguration() {
+      const name = prompt("Enter configuration name to load:");
+      if (!name) return;
+      const conf = localStorage.getItem(name);
+      if (conf) {
+        config = JSON.parse(conf);
+        renderGroups();
+        alert("Configuration loaded.");
+      } else {
+        alert("No configuration found.");
+      }
+    }
+
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+      doc.html(document.body, {
+        callback: function (pdf) {
+          pdf.save('comparison.pdf');
+        },
+        x: 10,
+        y: 10,
+        width: 280
+      });
+    }
+  </script>
 </body>
 </html>
